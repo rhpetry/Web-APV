@@ -1,0 +1,205 @@
+{
+  "session_id": "94de13ed-5cc0-427e-9c4c-447aaa611f5c",
+  "mode": "local",
+  "title": "Local ontology graph: o3po-edited.ttl",
+  "stored_path": "/Users/rhpetry/Desktop/Web-APV/data/triplestore/uploads/7de9523e-a8f0-4b99-ba67-d1a1fd2f0a8c-o3po-edited.ttl",
+  "graph_format": "turtle",
+  "filename": "o3po-edited.ttl",
+  "triplestore_url": null,
+  "username": null,
+  "validation_report": {
+    "constraints": {
+      "class_uri_formation_rule": null,
+      "relation_uri_formation_rule": null,
+      "instance_uri_formation_rule": "https://www.inf.ufrgs.br/ontologies/o3po#[a-zA-Z]+",
+      "language_coverage": [
+        "pt-br",
+        "en"
+      ],
+      "class_min_annotation_coverage": [],
+      "relation_min_annotation_coverage": [],
+      "instance_min_annotation_coverage": [
+        [
+          "rdfs:label",
+          1
+        ]
+      ],
+      "min_annotation_length": [
+        [
+          "https://www.inf.ufrgs.br/ontologies/o3po#thingname",
+          20
+        ]
+      ],
+      "max_annotation_length": [
+        [
+          "https://www.inf.ufrgs.br/ontologies/o3po#thingname",
+          30
+        ]
+      ],
+      "annotation_regular_expression": [
+        [
+          "https://www.inf.ufrgs.br/ontologies/o3po#thingname",
+          "^(a|b)+$"
+        ]
+      ],
+      "instance_of_min_annotation_coverage": [
+        [
+          "https://www.inf.ufrgs.br/ontologies/o3po#myclass",
+          [
+            [
+              "o3po:thingname",
+              1
+            ]
+          ]
+        ],
+        [
+          "https://www.inf.ufrgs.br/ontologies/o3po#ICV",
+          [
+            [
+              "rdf:label",
+              1
+            ],
+            [
+              "skos:example",
+              2
+            ]
+          ]
+        ]
+      ]
+    },
+    "violations": [
+      {
+        "check": "ClassURIFormationRule",
+        "parameter": null,
+        "violations": []
+      },
+      {
+        "check": "RelationURIFormationRule",
+        "parameter": null,
+        "violations": []
+      },
+      {
+        "check": "InstanceURIFormationRule",
+        "parameter": "https://www.inf.ufrgs.br/ontologies/o3po#[a-zA-Z]+",
+        "violations": [
+          "https://www.inf.ufrgs.br/ontologies/o3po#i01",
+          "https://www.inf.ufrgs.br/ontologies/o3po#v1234"
+        ]
+      },
+      {
+        "check": "GlobalMinLanguageCoverage",
+        "parameter": [
+          "pt-br",
+          "en"
+        ],
+        "violations": []
+      },
+      {
+        "check": "ClassMinAnnotationCoverage",
+        "parameter": [],
+        "violations": []
+      },
+      {
+        "check": "RelationMinAnnotationCoverage",
+        "parameter": [],
+        "violations": []
+      },
+      {
+        "check": "InstanceMinAnnotationCoverage",
+        "parameter": [
+          [
+            "rdfs:label",
+            1
+          ]
+        ],
+        "violations": [
+          [
+            "https://www.inf.ufrgs.br/ontologies/o3po#i01",
+            "Annotation rdfs:label with language en has 0 values, requires exactly 1"
+          ],
+          [
+            "https://www.inf.ufrgs.br/ontologies/o3po#valveFromFieldN",
+            "Annotation rdfs:label with language pt-br has 0 values, requires exactly 1"
+          ],
+          [
+            "https://www.inf.ufrgs.br/ontologies/o3po#valveFromFieldN",
+            "Annotation rdfs:label with language en has 0 values, requires exactly 1"
+          ]
+        ]
+      },
+      {
+        "check": "MinAnnotationLength",
+        "parameter": [
+          [
+            "https://www.inf.ufrgs.br/ontologies/o3po#thingname",
+            20
+          ]
+        ],
+        "violations": []
+      },
+      {
+        "check": "MaxAnnotationLength",
+        "parameter": [
+          [
+            "https://www.inf.ufrgs.br/ontologies/o3po#thingname",
+            30
+          ]
+        ],
+        "violations": []
+      },
+      {
+        "check": "AnnotationRegularExpression",
+        "parameter": [
+          [
+            "https://www.inf.ufrgs.br/ontologies/o3po#thingname",
+            "^(a|b)+$"
+          ]
+        ],
+        "violations": [
+          [
+            "https://www.inf.ufrgs.br/ontologies/o3po#a",
+            "Annotation https://www.inf.ufrgs.br/ontologies/o3po#thingname value 'ababababababababababababdabbb' does not match regex '^(a|b)+$'"
+          ]
+        ]
+      },
+      {
+        "check": "InstanceOfMinAnnotationCoverage",
+        "parameter": [
+          [
+            "https://www.inf.ufrgs.br/ontologies/o3po#myclass",
+            [
+              [
+                "o3po:thingname",
+                1
+              ]
+            ]
+          ],
+          [
+            "https://www.inf.ufrgs.br/ontologies/o3po#ICV",
+            [
+              [
+                "rdf:label",
+                1
+              ],
+              [
+                "skos:example",
+                2
+              ]
+            ]
+          ]
+        ],
+        "violations": [
+          [
+            "https://www.inf.ufrgs.br/ontologies/o3po#i01",
+            "Instance of https://www.inf.ufrgs.br/ontologies/o3po#myclass is missing required annotation o3po:thingname for language pt-br: has 0 values, requires exactly 1"
+          ],
+          [
+            "https://www.inf.ufrgs.br/ontologies/o3po#i01",
+            "Instance of https://www.inf.ufrgs.br/ontologies/o3po#myclass is missing required annotation o3po:thingname for language en: has 0 values, requires exactly 1"
+          ]
+        ]
+      }
+    ]
+  },
+  "validation_error": null
+}
