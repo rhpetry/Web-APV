@@ -12,7 +12,11 @@ from uuid import uuid4
 from fastapi import UploadFile
 from rdflib import Graph
 
-from backend.app.apv.config import settings
+from backend.app.apv_adapter import (
+    build_validation_report_from_local_file,
+    build_validation_report_from_remote_endpoint,
+)
+from backend.app.config import settings
 from backend.app.triplestore.schemas import QueryResult, QuerySession, ValidationReport
 
 
@@ -299,12 +303,7 @@ def _ensure_text(value: str | bytes) -> str:
 
 def _build_local_validation(stored_path: Path, graph_format: str) -> tuple[ValidationReport | None, str | None]:
     try:
-        from backend.app.apv.apv.reporting import build_validation_report
-        from backend.app.apv.apv.sparql_client import SparqlClient
-
-        report = build_validation_report(
-            SparqlClient.from_local_file(str(stored_path), format=graph_format)
-        )
+        report = build_validation_report_from_local_file(str(stored_path), graph_format)
     except Exception as exc:
         return None, f"APV validation could not be completed: {exc}"
     return _coerce_validation_report(report), None
@@ -316,15 +315,10 @@ def _build_remote_validation(
     password: str,
 ) -> tuple[ValidationReport | None, str | None]:
     try:
-        from backend.app.apv.apv.reporting import build_validation_report
-        from backend.app.apv.apv.sparql_client import SparqlClient
-
-        report = build_validation_report(
-            SparqlClient.from_remote_endpoint(
-                triplestore_url,
-                user=username,
-                password=password,
-            )
+        report = build_validation_report_from_remote_endpoint(
+            triplestore_url,
+            username,
+            password,
         )
     except Exception as exc:
         return None, f"APV validation could not be completed: {exc}"

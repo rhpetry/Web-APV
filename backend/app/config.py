@@ -8,7 +8,7 @@ class Settings(BaseSettings):
 
     API_V1_STR: str = "/api/v1"
     PROJECT_NAME: str = "Web APV"
-    BASE_DIR: Path = Path(__file__).resolve().parents[3]
+    BASE_DIR: Path = Path(__file__).resolve().parents[2]
     TRIPLESTORE_STORAGE_DIR: Path = BASE_DIR / "data" / "triplestore"
 
 

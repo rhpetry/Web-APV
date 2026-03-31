@@ -4,7 +4,7 @@ from fastapi.routing import APIRoute
 
 from backend.app.api.main import api_router
 from backend.app.api.routes import triplestore
-from backend.app.apv.config import settings
+from backend.app.config import settings
 
 
 def custom_generate_unique_id(route: APIRoute) -> str:
