@@ -24,6 +24,20 @@ WHERE {
 LIMIT 25
 """
 
+CHECK_PURPOSES = {
+    "ClassURIFormationRule": "Checks whether each class IRI follows the configured naming pattern.",
+    "RelationURIFormationRule": "Checks whether relation and annotation property IRIs follow the configured naming pattern.",
+    "InstanceURIFormationRule": "Checks whether instance IRIs follow the configured naming pattern declared in the ontology.",
+    "GlobalMinLanguageCoverage": "Captures the required language tags used by annotation coverage checks to enforce mandatory translations.",
+    "ClassMinAnnotationCoverage": "Checks whether every class has the required annotation properties with the expected cardinality, including per-language counts when configured.",
+    "RelationMinAnnotationCoverage": "Checks whether every relation has the required annotation properties with the expected cardinality, including per-language counts when configured.",
+    "InstanceMinAnnotationCoverage": "Checks whether every instance has the required annotation properties with the expected cardinality, including per-language counts when configured.",
+    "MinAnnotationLength": "Checks whether annotation values meet the configured minimum character length.",
+    "MaxAnnotationLength": "Checks whether annotation values stay within the configured maximum character length.",
+    "AnnotationRegularExpression": "Checks whether annotation values match the configured syntax or text pattern.",
+    "InstanceOfMinAnnotationCoverage": "Checks whether instances of specific classes carry the required annotation properties with the expected cardinality.",
+}
+
 
 def get_home_page(error_message: str | None = None) -> str:
     error_block = ""
@@ -134,8 +148,8 @@ def get_home_page(error_message: str | None = None) -> str:
   </head>
   <body>
     <main>
-      <h1>Ontology And SPARQL Workspace</h1>
-      <p>Upload an ontology file to validate it with RDFLib and query it locally, or provide a SPARQL endpoint and query the server directly.</p>
+      <h1>Annotation Property Verificator</h1>
+      <p>Evaluate OWL ontologies with APV by reading annotation-based quality constraints from the ontology itself and checking them through SPARQL, whether your source is a local RDF file or a remote endpoint.</p>
       {error_block}
       <form action="/api/v1/triplestore/submit" method="post" enctype="multipart/form-data">
         <div class="panel">
@@ -158,7 +172,7 @@ def get_home_page(error_message: str | None = None) -> str:
           </div>
           <p class="hint">Submit either a local ontology file or a complete set of triplestore credentials.</p>
         </div>
-        <button type="submit">Open Query Interface</button>
+        <button type="submit">Evaluate Ontology</button>
       </form>
     </main>
   </body>
@@ -237,6 +251,13 @@ def _sorted_checks(report: ValidationReport) -> list:
     )
 
 
+def _check_purpose(check_name: str) -> str:
+    return CHECK_PURPOSES.get(
+        check_name,
+        "Checks ontology data against the APV constraint configured for this validation test.",
+    )
+
+
 def _render_constraints(report: ValidationReport | None) -> str:
     if report is None:
         return ""
@@ -296,6 +317,7 @@ def _render_violations(report: ValidationReport | None, error_message: str | Non
     <span class="badge">{len(check.violations)} issues</span>
   </summary>
   <div class="check-body">
+    <p class="check-purpose">{escape(_check_purpose(check.check))}</p>
     <div class="detail-section">
       <h4>Parameters</h4>
       <div class="detail-content">{_render_value(check.parameter)}</div>
@@ -501,6 +523,10 @@ def render_query_page(
       }}
       .check-body {{
         padding: 0 18px 18px;
+      }}
+      .check-purpose {{
+        margin: 0 0 14px;
+        color: #526880;
       }}
       .detail-section + .detail-section {{
         margin-top: 18px;
