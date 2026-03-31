@@ -46,6 +46,8 @@ GRAPH_FORMAT_BY_CONTENT_TYPE = {
     "text/turtle": "turtle",
 }
 QUERY_TYPE_PATTERN = re.compile(r"\b(select|ask|construct|describe)\b", re.IGNORECASE)
+MAX_STORED_UPLOADS = 3
+MAX_STORED_SESSIONS = 3
 
 
 class SubmissionError(Exception):
@@ -96,8 +98,16 @@ def _query_type(query: str) -> str:
     return match.group(1).lower()
 
 
+def _trim_directory(path: Path, keep_last: int) -> None:
+    files = [item for item in path.iterdir() if item.is_file()]
+    files.sort(key=lambda item: item.stat().st_mtime, reverse=True)
+    for stale_file in files[keep_last:]:
+        stale_file.unlink(missing_ok=True)
+
+
 def _save_session(session: QuerySession) -> QuerySession:
     _session_path(session.session_id).write_text(session.model_dump_json(indent=2), encoding="utf-8")
+    _trim_directory(_sessions_dir(), MAX_STORED_SESSIONS)
     return session
 
 
@@ -140,6 +150,7 @@ async def create_local_graph_session(ontology_file: UploadFile) -> QuerySession:
     stored_name = f"{uuid4()}-{ontology_file.filename}"
     stored_path = _uploads_dir() / stored_name
     stored_path.write_bytes(content)
+    _trim_directory(_uploads_dir(), MAX_STORED_UPLOADS)
 
     try:
         graph = Graph()
