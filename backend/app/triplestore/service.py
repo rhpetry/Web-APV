@@ -267,10 +267,12 @@ def _run_remote_query(session_id: str, session: QuerySession, query: str) -> Que
 
     query_type = _query_type(query)
     accept = "application/sparql-results+json"
+    request_format = "json"
     if query_type in {"construct", "describe"}:
-        accept = "text/turtle"
+        accept = "application/n-triples, text/plain; q=0.9, text/turtle; q=0.8"
+        request_format = "nt"
 
-    body = urlencode({"query": query}).encode("utf-8")
+    body = urlencode({"query": query, "format": request_format}).encode("utf-8")
     request = Request(
         str(session.triplestore_url),
         data=body,
@@ -350,14 +352,16 @@ def _resolve_remote_auth(
 
 
 def _request_keycloak_token(auth_server_url: str, username: str, password: str) -> str:
-    body = urlencode(
-        {
-            "grant_type": "password",
-            "client_id": "admin-cli",
-            "username": username,
-            "password": password,
-        }
-    ).encode("utf-8")
+    token_request_payload = {
+        "grant_type": "password",
+        "client_id": settings.KEYCLOAK_CLIENT_ID,
+        "username": username,
+        "password": password,
+    }
+    if settings.KEYCLOAK_SCOPE:
+        token_request_payload["scope"] = settings.KEYCLOAK_SCOPE
+
+    body = urlencode(token_request_payload).encode("utf-8")
     request = Request(
         auth_server_url,
         data=body,

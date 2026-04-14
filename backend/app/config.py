@@ -10,6 +10,8 @@ class Settings(BaseSettings):
     PROJECT_NAME: str = "Web APV"
     BASE_DIR: Path = Path(__file__).resolve().parents[2]
     TRIPLESTORE_STORAGE_DIR: Path = BASE_DIR / "data" / "triplestore"
+    KEYCLOAK_CLIENT_ID: str = "anzograph"
+    KEYCLOAK_SCOPE: str = "openid"
 
 
 settings = Settings()
