@@ -1,4 +1,3 @@
-import base64
 import json
 import re
 from datetime import datetime, timezone
@@ -121,20 +120,26 @@ def load_session(session_id: str) -> QuerySession:
 async def process_submission(
     ontology_file: UploadFile | None,
     triplestore_url: str | None,
+    jwt_auth_enabled: bool,
+    auth_server_url: str | None,
     username: str | None,
     password: str | None,
+    jwt_token: str | None,
 ) -> QuerySession:
     if ontology_file is not None and ontology_file.filename:
         return await create_local_graph_session(ontology_file)
 
-    if triplestore_url and username and password:
+    if triplestore_url:
         return create_remote_session(
             triplestore_url=triplestore_url,
+            jwt_auth_enabled=jwt_auth_enabled,
+            auth_server_url=auth_server_url,
             username=username,
             password=password,
+            jwt_token=jwt_token,
         )
 
-    raise SubmissionError("Provide either an ontology file or all triplestore credentials fields.")
+    raise SubmissionError("Provide either an ontology file or a SPARQL endpoint URL.")
 
 
 async def create_local_graph_session(ontology_file: UploadFile) -> QuerySession:
@@ -177,24 +182,35 @@ async def create_local_graph_session(ontology_file: UploadFile) -> QuerySession:
 
 def create_remote_session(
     triplestore_url: str,
-    username: str,
-    password: str,
+    jwt_auth_enabled: bool,
+    auth_server_url: str | None,
+    username: str | None,
+    password: str | None,
+    jwt_token: str | None,
 ) -> QuerySession:
     session_id = str(uuid4())
     stored_path = _session_path(session_id)
-    validation_report, validation_error = _build_remote_validation(triplestore_url, username, password)
+    auth_header, resolved_auth_server_url = _resolve_remote_auth(
+        jwt_auth_enabled=jwt_auth_enabled,
+        auth_server_url=auth_server_url,
+        username=username,
+        password=password,
+        jwt_token=jwt_token,
+    )
+    validation_report, validation_error = _build_remote_validation(triplestore_url, auth_header)
     session = QuerySession(
         session_id=session_id,
         mode="triplestore",
         title=f"Remote SPARQL endpoint: {triplestore_url}",
         triplestore_url=triplestore_url,
-        username=username,
+        jwt_auth_enabled=jwt_auth_enabled,
+        auth_server_url=resolved_auth_server_url,
         validation_report=validation_report,
         validation_error=validation_error,
     )
     payload = session.model_dump(mode="json")
     payload["created_at"] = datetime.now(timezone.utc).isoformat()
-    payload["password"] = password
+    payload["auth_header"] = auth_header
     stored_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
     return load_session(session_id)
 
@@ -243,8 +259,10 @@ def _run_local_query(session: QuerySession, query: str) -> QueryResult:
 def _run_remote_query(session_id: str, session: QuerySession, query: str) -> QueryResult:
     session_file = _session_path(session_id)
     payload = json.loads(session_file.read_text(encoding="utf-8"))
-    password = payload.get("password")
-    if not password or session.triplestore_url is None:
+    auth_header = payload.get("auth_header")
+    if session.jwt_auth_enabled and not auth_header:
+        raise QueryExecutionError("This JWT-authenticated SPARQL session is incomplete.")
+    if session.triplestore_url is None:
         raise QueryExecutionError("This triplestore session is incomplete.")
 
     query_type = _query_type(query)
@@ -260,7 +278,7 @@ def _run_remote_query(session_id: str, session: QuerySession, query: str) -> Que
         headers={
             "Accept": accept,
             "Content-Type": "application/x-www-form-urlencoded; charset=utf-8",
-            "Authorization": _basic_auth_header(session.username or "", password),
+            **({"Authorization": auth_header} if auth_header else {}),
         },
     )
 
@@ -301,9 +319,83 @@ def _run_remote_query(session_id: str, session: QuerySession, query: str) -> Que
     return QueryResult(query_type="unknown", raw_text=_ensure_text(response_body))
 
 
-def _basic_auth_header(username: str, password: str) -> str:
-    token = base64.b64encode(f"{username}:{password}".encode("utf-8")).decode("ascii")
-    return f"Basic {token}"
+def _resolve_remote_auth(
+    jwt_auth_enabled: bool,
+    auth_server_url: str | None,
+    username: str | None,
+    password: str | None,
+    jwt_token: str | None,
+) -> tuple[str | None, str | None]:
+    if not jwt_auth_enabled:
+        return None, None
+
+    token = (jwt_token or "").strip()
+    if token:
+        return _bearer_auth_header(token), _clean_optional_text(auth_server_url)
+
+    cleaned_auth_server_url = _clean_optional_text(auth_server_url)
+    cleaned_username = _clean_optional_text(username)
+    cleaned_password = _clean_optional_text(password)
+    if not cleaned_auth_server_url or not cleaned_username or not cleaned_password:
+        raise SubmissionError(
+            "When JWT authentication is enabled, provide a JWT token or fill in authentication server URL, username, and password."
+        )
+
+    fetched_token = _request_keycloak_token(
+        auth_server_url=cleaned_auth_server_url,
+        username=cleaned_username,
+        password=cleaned_password,
+    )
+    return _bearer_auth_header(fetched_token), cleaned_auth_server_url
+
+
+def _request_keycloak_token(auth_server_url: str, username: str, password: str) -> str:
+    body = urlencode(
+        {
+            "grant_type": "password",
+            "client_id": "admin-cli",
+            "username": username,
+            "password": password,
+        }
+    ).encode("utf-8")
+    request = Request(
+        auth_server_url,
+        data=body,
+        method="POST",
+        headers={
+            "Accept": "application/json",
+            "Content-Type": "application/x-www-form-urlencoded; charset=utf-8",
+        },
+    )
+
+    try:
+        with urlopen(request, timeout=30) as response:
+            payload = json.loads(_ensure_text(response.read()))
+    except HTTPError as exc:
+        detail = _ensure_text(exc.read())
+        raise SubmissionError(f"Could not retrieve a JWT token from the authentication server: HTTP {exc.code}: {detail or exc.reason}") from exc
+    except URLError as exc:
+        raise SubmissionError(f"Could not reach the authentication server: {exc.reason}") from exc
+    except json.JSONDecodeError as exc:
+        raise SubmissionError("The authentication server did not return valid JSON.") from exc
+    except Exception as exc:
+        raise SubmissionError(f"JWT authentication failed: {exc}") from exc
+
+    token = payload.get("access_token")
+    if not token:
+        raise SubmissionError("The authentication server response did not include an access token.")
+    return str(token)
+
+
+def _bearer_auth_header(token: str) -> str:
+    return f"Bearer {token.strip()}"
+
+
+def _clean_optional_text(value: str | None) -> str | None:
+    if value is None:
+        return None
+    cleaned = value.strip()
+    return cleaned or None
 
 
 def _ensure_text(value: str | bytes) -> str:
@@ -322,14 +414,12 @@ def _build_local_validation(stored_path: Path, graph_format: str) -> tuple[Valid
 
 def _build_remote_validation(
     triplestore_url: str,
-    username: str,
-    password: str,
+    auth_header: str | None,
 ) -> tuple[ValidationReport | None, str | None]:
     try:
         report = build_validation_report_from_remote_endpoint(
             triplestore_url,
-            username,
-            password,
+            auth_header,
         )
     except Exception as exc:
         return None, f"APV validation could not be completed: {exc}"

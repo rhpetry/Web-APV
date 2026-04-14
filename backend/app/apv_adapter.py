@@ -46,8 +46,7 @@ def build_validation_report_from_local_file(path: str, graph_format: str) -> dic
 
 def build_validation_report_from_remote_endpoint(
     endpoint: str,
-    username: str,
-    password: str,
+    auth_header: str | None = None,
 ) -> dict[str, Any]:
     _ensure_apv_submodule_on_path()
 
@@ -67,7 +66,7 @@ def build_validation_report_from_remote_endpoint(
     )
     from apv.sparql_client import SparqlClient
 
-    client = SparqlClient.from_remote_endpoint(endpoint, user=username, password=password)
+    client = SparqlClient.from_remote_endpoint(endpoint, auth_header=auth_header)
     return _build_report(
         client,
         _build_constraints,

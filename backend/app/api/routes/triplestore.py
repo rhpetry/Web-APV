@@ -94,6 +94,9 @@ def get_home_page(error_message: str | None = None) -> str:
         gap: 16px;
         grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
       }}
+      .single-column {{
+        grid-template-columns: 1fr;
+      }}
       label {{
         display: grid;
         gap: 8px;
@@ -144,6 +147,20 @@ def get_home_page(error_message: str | None = None) -> str:
         background: #f5f8ff;
         border: 1px solid #dbe5f5;
       }}
+      .toggle-row {{
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-top: 18px;
+        font-weight: 600;
+      }}
+      .toggle-row input[type="checkbox"] {{
+        width: 18px;
+        height: 18px;
+      }}
+      .auth-fields[hidden] {{
+        display: none;
+      }}
     </style>
   </head>
   <body>
@@ -159,22 +176,47 @@ def get_home_page(error_message: str | None = None) -> str:
           <p class="hint">Accepted file types: .rdf, .owl, .xml, .ttl</p>
         </div>
         <div class="panel">
-          <div class="grid">
+          <div class="grid single-column">
             <label for="triplestore_url">SPARQL endpoint URL
               <input id="triplestore_url" name="triplestore_url" type="url" placeholder="https://example.com/sparql" />
             </label>
-            <label for="username">Username
-              <input id="username" name="username" type="text" placeholder="user" />
-            </label>
-            <label for="password">Password
-              <input id="password" name="password" type="password" placeholder="password" />
+          </div>
+          <label class="toggle-row" for="jwt_auth_enabled">
+            <input id="jwt_auth_enabled" name="jwt_auth_enabled" type="checkbox" value="true" />
+            Enable JWT authentication
+          </label>
+          <div id="auth-fields" class="auth-fields" hidden>
+            <div class="grid">
+              <label for="auth_server_url">Authentication server URL
+                <input id="auth_server_url" name="auth_server_url" type="url" placeholder="https://keycloak.example.com/realms/my-realm/protocol/openid-connect/token" />
+              </label>
+              <label for="username">Username
+                <input id="username" name="username" type="text" placeholder="user" />
+              </label>
+              <label for="password">Password
+                <input id="password" name="password" type="password" placeholder="password" />
+              </label>
+            </div>
+            <label for="jwt_token" style="margin-top: 16px;">JWT token
+              <input id="jwt_token" name="jwt_token" type="password" placeholder="Optional: paste an existing bearer token" />
             </label>
           </div>
-          <p class="hint">Submit either a local ontology file or a complete set of triplestore credentials.</p>
+          <p class="hint">Submit either a local ontology file or a SPARQL endpoint URL. Enable JWT only when the endpoint requires a bearer token.</p>
         </div>
         <button type="submit">Evaluate Ontology</button>
       </form>
     </main>
+    <script>
+      const jwtToggle = document.getElementById("jwt_auth_enabled");
+      const authFields = document.getElementById("auth-fields");
+
+      function syncJwtFields() {{
+        authFields.hidden = !jwtToggle.checked;
+      }}
+
+      jwtToggle.addEventListener("change", syncJwtFields);
+      syncJwtFields();
+    </script>
   </body>
 </html>
 """
@@ -363,7 +405,12 @@ def render_query_page(
     else:
         source_details = (
             f"<p><strong>Remote endpoint:</strong> {escape(str(session.triplestore_url or ''))}</p>"
-            f"<p><strong>Username:</strong> {escape(session.username or '')}</p>"
+            f"<p><strong>JWT authentication:</strong> {'Enabled' if session.jwt_auth_enabled else 'Disabled'}</p>"
+            + (
+                f"<p><strong>Authentication server:</strong> {escape(str(session.auth_server_url))}</p>"
+                if session.auth_server_url
+                else ""
+            )
         )
 
     return f"""
@@ -767,8 +814,11 @@ async def submit_triplestore_input(submission: SubmissionInputDep) -> HTMLRespon
         session = await process_submission(
             ontology_file=submission.ontology_file,
             triplestore_url=submission.triplestore_url,
+            jwt_auth_enabled=submission.jwt_auth_enabled,
+            auth_server_url=submission.auth_server_url,
             username=submission.username,
             password=submission.password,
+            jwt_token=submission.jwt_token,
         )
     except SubmissionError as exc:
         return HTMLResponse(content=get_home_page(str(exc)), status_code=400)

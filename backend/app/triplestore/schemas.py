@@ -22,7 +22,8 @@ class QuerySession(BaseModel):
     graph_format: str | None = None
     filename: str | None = None
     triplestore_url: HttpUrl | None = None
-    username: str | None = None
+    jwt_auth_enabled: bool = False
+    auth_server_url: HttpUrl | None = None
     validation_report: ValidationReport | None = None
     validation_error: str | None = None
 
