@@ -183,11 +183,11 @@ def get_home_page(error_message: str | None = None) -> str:
           </div>
           <label class="toggle-row" for="jwt_auth_enabled">
             <input id="jwt_auth_enabled" name="jwt_auth_enabled" type="checkbox" value="true" />
-            Enable JWT authentication
+            Enable Keycloak / JWT authentication
           </label>
           <div id="auth-fields" class="auth-fields" hidden>
             <div class="grid">
-              <label for="auth_server_url">Authentication server URL
+              <label for="auth_server_url">Keycloak token endpoint
                 <input id="auth_server_url" name="auth_server_url" type="url" placeholder="https://keycloak.example.com/realms/my-realm/protocol/openid-connect/token" />
               </label>
               <label for="username">Username
@@ -197,11 +197,11 @@ def get_home_page(error_message: str | None = None) -> str:
                 <input id="password" name="password" type="password" placeholder="password" />
               </label>
             </div>
-            <label for="jwt_token" style="margin-top: 16px;">JWT token
+            <label for="jwt_token" style="margin-top: 16px;">Bearer token
               <input id="jwt_token" name="jwt_token" type="password" placeholder="Optional: paste an existing bearer token" />
             </label>
           </div>
-          <p class="hint">Submit either a local ontology file or a SPARQL endpoint URL. Enable JWT only when the endpoint requires a bearer token.</p>
+          <p class="hint">Submit either a local ontology file or a SPARQL endpoint URL. For protected endpoints, provide either a bearer token or a Keycloak token endpoint plus credentials.</p>
         </div>
         <button type="submit">Evaluate Ontology</button>
       </form>

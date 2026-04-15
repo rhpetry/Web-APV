@@ -1,6 +1,6 @@
 import json
 import re
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 from urllib.error import HTTPError, URLError
@@ -47,6 +47,7 @@ GRAPH_FORMAT_BY_CONTENT_TYPE = {
 QUERY_TYPE_PATTERN = re.compile(r"\b(select|ask|construct|describe)\b", re.IGNORECASE)
 MAX_STORED_UPLOADS = 3
 MAX_STORED_SESSIONS = 3
+TOKEN_REFRESH_MARGIN = timedelta(seconds=30)
 
 
 class SubmissionError(Exception):
@@ -190,27 +191,27 @@ def create_remote_session(
 ) -> QuerySession:
     session_id = str(uuid4())
     stored_path = _session_path(session_id)
-    auth_header, resolved_auth_server_url = _resolve_remote_auth(
+    auth_state = _resolve_remote_auth(
         jwt_auth_enabled=jwt_auth_enabled,
         auth_server_url=auth_server_url,
         username=username,
         password=password,
         jwt_token=jwt_token,
     )
-    validation_report, validation_error = _build_remote_validation(triplestore_url, auth_header)
+    validation_report, validation_error = _build_remote_validation(triplestore_url, auth_state["auth_header"])
     session = QuerySession(
         session_id=session_id,
         mode="triplestore",
         title=f"Remote SPARQL endpoint: {triplestore_url}",
         triplestore_url=triplestore_url,
         jwt_auth_enabled=jwt_auth_enabled,
-        auth_server_url=resolved_auth_server_url,
+        auth_server_url=auth_state["auth_server_url"],
         validation_report=validation_report,
         validation_error=validation_error,
     )
     payload = session.model_dump(mode="json")
     payload["created_at"] = datetime.now(timezone.utc).isoformat()
-    payload["auth_header"] = auth_header
+    payload.update(auth_state)
     stored_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
     return load_session(session_id)
 
@@ -259,11 +260,12 @@ def _run_local_query(session: QuerySession, query: str) -> QueryResult:
 def _run_remote_query(session_id: str, session: QuerySession, query: str) -> QueryResult:
     session_file = _session_path(session_id)
     payload = json.loads(session_file.read_text(encoding="utf-8"))
-    auth_header = payload.get("auth_header")
-    if session.jwt_auth_enabled and not auth_header:
-        raise QueryExecutionError("This JWT-authenticated SPARQL session is incomplete.")
     if session.triplestore_url is None:
         raise QueryExecutionError("This triplestore session is incomplete.")
+
+    auth_header, updated_payload = _resolve_session_auth(session, payload)
+    if updated_payload is not payload:
+        session_file.write_text(json.dumps(updated_payload, indent=2), encoding="utf-8")
 
     query_type = _query_type(query)
     accept = "application/sparql-results+json"
@@ -272,9 +274,52 @@ def _run_remote_query(session_id: str, session: QuerySession, query: str) -> Que
         accept = "application/n-triples, text/plain; q=0.9, text/turtle; q=0.8"
         request_format = "nt"
 
+    try:
+        response_body, response_type = _execute_remote_query_request(
+            endpoint=str(session.triplestore_url),
+            query=query,
+            request_format=request_format,
+            accept=accept,
+            auth_header=auth_header,
+        )
+    except HTTPError as exc:
+        if exc.code == 401 and session.jwt_auth_enabled:
+            auth_header, refreshed_payload = _resolve_session_auth(session, updated_payload, force_refresh=True)
+            try:
+                response_body, response_type = _execute_remote_query_request(
+                    endpoint=str(session.triplestore_url),
+                    query=query,
+                    request_format=request_format,
+                    accept=accept,
+                    auth_header=auth_header,
+                )
+            except HTTPError as retry_exc:
+                detail = _ensure_text(retry_exc.read())
+                raise QueryExecutionError(
+                    f"SPARQL server returned HTTP {retry_exc.code}: {detail or retry_exc.reason}"
+                ) from retry_exc
+            session_file.write_text(json.dumps(refreshed_payload, indent=2), encoding="utf-8")
+            return _parse_remote_query_result(query_type, response_type, response_body)
+        detail = _ensure_text(exc.read())
+        raise QueryExecutionError(f"SPARQL server returned HTTP {exc.code}: {detail or exc.reason}") from exc
+    except URLError as exc:
+        raise QueryExecutionError(f"Could not reach the SPARQL server: {exc.reason}") from exc
+    except Exception as exc:
+        raise QueryExecutionError(f"SPARQL request failed: {exc}") from exc
+
+    return _parse_remote_query_result(query_type, response_type, response_body)
+
+
+def _execute_remote_query_request(
+    endpoint: str,
+    query: str,
+    request_format: str,
+    accept: str,
+    auth_header: str | None,
+) -> tuple[bytes, str]:
     body = urlencode({"query": query, "format": request_format}).encode("utf-8")
     request = Request(
-        str(session.triplestore_url),
+        endpoint,
         data=body,
         method="POST",
         headers={
@@ -283,19 +328,11 @@ def _run_remote_query(session_id: str, session: QuerySession, query: str) -> Que
             **({"Authorization": auth_header} if auth_header else {}),
         },
     )
+    with urlopen(request, timeout=30) as response:
+        return response.read(), response.headers.get_content_type()
 
-    try:
-        with urlopen(request, timeout=30) as response:
-            response_body = response.read()
-            response_type = response.headers.get_content_type()
-    except HTTPError as exc:
-        detail = _ensure_text(exc.read())
-        raise QueryExecutionError(f"SPARQL server returned HTTP {exc.code}: {detail or exc.reason}") from exc
-    except URLError as exc:
-        raise QueryExecutionError(f"Could not reach the SPARQL server: {exc.reason}") from exc
-    except Exception as exc:
-        raise QueryExecutionError(f"SPARQL request failed: {exc}") from exc
 
+def _parse_remote_query_result(query_type: str, response_type: str, response_body: bytes) -> QueryResult:
     if query_type in {"select", "ask"} or response_type == "application/sparql-results+json":
         try:
             parsed = json.loads(_ensure_text(response_body))
@@ -327,13 +364,27 @@ def _resolve_remote_auth(
     username: str | None,
     password: str | None,
     jwt_token: str | None,
-) -> tuple[str | None, str | None]:
+) -> dict[str, str | None]:
     if not jwt_auth_enabled:
-        return None, None
+        return {
+            "auth_header": None,
+            "auth_server_url": None,
+            "refresh_token": None,
+            "token_expires_at": None,
+            "username": None,
+            "password": None,
+        }
 
     token = (jwt_token or "").strip()
     if token:
-        return _bearer_auth_header(token), _clean_optional_text(auth_server_url)
+        return {
+            "auth_header": _bearer_auth_header(token),
+            "auth_server_url": _clean_optional_text(auth_server_url),
+            "refresh_token": None,
+            "token_expires_at": None,
+            "username": None,
+            "password": None,
+        }
 
     cleaned_auth_server_url = _clean_optional_text(auth_server_url)
     cleaned_username = _clean_optional_text(username)
@@ -343,15 +394,20 @@ def _resolve_remote_auth(
             "When JWT authentication is enabled, provide a JWT token or fill in authentication server URL, username, and password."
         )
 
-    fetched_token = _request_keycloak_token(
+    token_payload = _request_keycloak_token(
         auth_server_url=cleaned_auth_server_url,
         username=cleaned_username,
         password=cleaned_password,
     )
-    return _bearer_auth_header(fetched_token), cleaned_auth_server_url
+    return _build_auth_state(
+        auth_server_url=cleaned_auth_server_url,
+        token_payload=token_payload,
+        username=cleaned_username,
+        password=cleaned_password,
+    )
 
 
-def _request_keycloak_token(auth_server_url: str, username: str, password: str) -> str:
+def _request_keycloak_token(auth_server_url: str, username: str, password: str) -> dict[str, Any]:
     token_request_payload = {
         "grant_type": "password",
         "client_id": settings.KEYCLOAK_CLIENT_ID,
@@ -385,10 +441,121 @@ def _request_keycloak_token(auth_server_url: str, username: str, password: str) 
     except Exception as exc:
         raise SubmissionError(f"JWT authentication failed: {exc}") from exc
 
+    return _validate_token_payload(payload)
+
+
+def _refresh_keycloak_token(auth_server_url: str, refresh_token: str) -> dict[str, Any]:
+    token_request_payload = {
+        "grant_type": "refresh_token",
+        "client_id": settings.KEYCLOAK_CLIENT_ID,
+        "refresh_token": refresh_token,
+    }
+    if settings.KEYCLOAK_SCOPE:
+        token_request_payload["scope"] = settings.KEYCLOAK_SCOPE
+
+    body = urlencode(token_request_payload).encode("utf-8")
+    request = Request(
+        auth_server_url,
+        data=body,
+        method="POST",
+        headers={
+            "Accept": "application/json",
+            "Content-Type": "application/x-www-form-urlencoded; charset=utf-8",
+        },
+    )
+
+    try:
+        with urlopen(request, timeout=30) as response:
+            payload = json.loads(_ensure_text(response.read()))
+    except HTTPError as exc:
+        detail = _ensure_text(exc.read())
+        raise SubmissionError(f"Could not refresh the JWT token: HTTP {exc.code}: {detail or exc.reason}") from exc
+    except URLError as exc:
+        raise SubmissionError(f"Could not reach the authentication server: {exc.reason}") from exc
+    except json.JSONDecodeError as exc:
+        raise SubmissionError("The authentication server did not return valid JSON.") from exc
+    except Exception as exc:
+        raise SubmissionError(f"JWT authentication failed: {exc}") from exc
+
+    return _validate_token_payload(payload)
+
+
+def _validate_token_payload(payload: dict[str, Any]) -> dict[str, Any]:
     token = payload.get("access_token")
     if not token:
         raise SubmissionError("The authentication server response did not include an access token.")
-    return str(token)
+    return payload
+
+
+def _build_auth_state(
+    auth_server_url: str,
+    token_payload: dict[str, Any],
+    username: str | None,
+    password: str | None,
+) -> dict[str, str | None]:
+    expires_in = _parse_expires_in(token_payload.get("expires_in"))
+    expires_at = None
+    if expires_in is not None:
+        expires_at = (datetime.now(timezone.utc) + timedelta(seconds=expires_in)).isoformat()
+    return {
+        "auth_header": _bearer_auth_header(str(token_payload["access_token"])),
+        "auth_server_url": auth_server_url,
+        "refresh_token": _clean_optional_text(token_payload.get("refresh_token")),
+        "token_expires_at": expires_at,
+        "username": username,
+        "password": password,
+    }
+
+
+def _resolve_session_auth(
+    session: QuerySession,
+    payload: dict[str, Any],
+    force_refresh: bool = False,
+) -> tuple[str | None, dict[str, Any]]:
+    auth_header = _clean_optional_text(payload.get("auth_header"))
+    if not session.jwt_auth_enabled:
+        return auth_header, payload
+
+    if not force_refresh and auth_header and not _token_is_expiring(payload.get("token_expires_at")):
+        return auth_header, payload
+
+    auth_server_url = _clean_optional_text(payload.get("auth_server_url"))
+    refresh_token = _clean_optional_text(payload.get("refresh_token"))
+    username = _clean_optional_text(payload.get("username"))
+    password = _clean_optional_text(payload.get("password"))
+
+    if refresh_token and auth_server_url:
+        token_payload = _refresh_keycloak_token(auth_server_url, refresh_token)
+        updated_payload = dict(payload)
+        updated_payload.update(
+            _build_auth_state(
+                auth_server_url=auth_server_url,
+                token_payload=token_payload,
+                username=username,
+                password=password,
+            )
+        )
+        return updated_payload["auth_header"], updated_payload
+
+    if auth_server_url and username and password:
+        token_payload = _request_keycloak_token(auth_server_url, username, password)
+        updated_payload = dict(payload)
+        updated_payload.update(
+            _build_auth_state(
+                auth_server_url=auth_server_url,
+                token_payload=token_payload,
+                username=username,
+                password=password,
+            )
+        )
+        return updated_payload["auth_header"], updated_payload
+
+    if auth_header and not force_refresh:
+        return auth_header, payload
+
+    raise QueryExecutionError(
+        "This JWT-authenticated SPARQL session expired and cannot be renewed. Submit the endpoint again with Keycloak credentials or a fresh token."
+    )
 
 
 def _bearer_auth_header(token: str) -> str:
@@ -400,6 +567,28 @@ def _clean_optional_text(value: str | None) -> str | None:
         return None
     cleaned = value.strip()
     return cleaned or None
+
+
+def _parse_expires_in(value: Any) -> int | None:
+    if value in (None, ""):
+        return None
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        return None
+    return parsed if parsed > 0 else None
+
+
+def _token_is_expiring(expires_at: Any) -> bool:
+    if not expires_at:
+        return False
+    try:
+        expires_at_dt = datetime.fromisoformat(str(expires_at))
+    except ValueError:
+        return True
+    if expires_at_dt.tzinfo is None:
+        expires_at_dt = expires_at_dt.replace(tzinfo=timezone.utc)
+    return expires_at_dt <= datetime.now(timezone.utc) + TOKEN_REFRESH_MARGIN
 
 
 def _ensure_text(value: str | bytes) -> str:
