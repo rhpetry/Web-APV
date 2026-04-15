@@ -1,46 +1,61 @@
 # Web APV
 
-FastAPI starter organized to mirror the backend layout of `fastapi/full-stack-fastapi-template`, using `backend/app/main.py`, `backend/app/api/main.py`, route modules, and a small `core/config.py`.
+Web APV is now a browser-only TypeScript application. It no longer depends on FastAPI, Python, or a server-side RDF runtime.
 
-## Structure
+The application uses:
+
+- `rdflib.js` to parse and inspect local RDF graphs directly in the browser
+- a dedicated Web Worker to run APV constraint discovery and validation without freezing the UI
+- direct browser `fetch` calls for remote SPARQL endpoints when the endpoint allows CORS
+
+## What changed
+
+- The old backend and embedded Python APV runtime were removed.
+- APV constraint discovery and validation logic were ported to TypeScript.
+- Evaluation progress now lives entirely in browser state and exposes real iteration counts:
+  `completed / remaining / total`
+- The UI is a Vite + React SPA.
+
+## Project structure
 
 ```text
-backend/
-  app/
-    api/
-      deps.py
-      main.py
-      routes/
-        reporting.py
-        triplestore.py
-    core/
-      config.py
-    schemas/
-      triplestore.py
-    services/
-      triplestore.py
-    main.py
-main.py
+src/
+  App.tsx
+  constants.ts
+  types.ts
+  lib/
+    apv.ts
+    workerProtocol.ts
+  workers/
+    evaluator.worker.ts
+index.html
+package.json
+vite.config.ts
 ```
 
-## Endpoints
-
-- `GET /` serves a webpage that displays `hello`
-- `POST /api/v1/triplestore/submit` accepts either:
-- an ontology file in `.rdf`, `.owl`, or `.xml`
-- a triplestore URL plus login credentials
-- `GET /api/v1/reporting/` is a placeholder module for future reporting features
-
-## Run
+## Run locally
 
 ```bash
-uv run main.py
+npm install
+npm run dev
 ```
 
-Then open `http://127.0.0.1:8000`.
+Then open the local Vite URL shown in the terminal.
 
-## API behavior
+## Build
 
-- If a file is uploaded, the API returns basic metadata about the file.
-- If `triplestore_url`, `username`, and `password` are provided, the API returns the submitted connection data except for the password.
-- If neither input mode is complete, the API returns `400 Bad Request`.
+```bash
+npm run build
+```
+
+## Browser runtime behavior
+
+- Local ontology files are parsed and evaluated entirely in the browser.
+- Remote SPARQL endpoints are queried directly from the browser, so they must allow CORS.
+- Protected endpoints can use a bearer token or a browser-reachable Keycloak token endpoint.
+- APV constraint discovery runs first, then the validation checks execute in the browser worker.
+
+## Current limits
+
+- The browser refactor preserves APV evaluation behavior, progress tracking, local file parsing, and direct remote SPARQL querying.
+- Local ad hoc queries currently target `SELECT` and `ASK`. `CONSTRUCT` and `DESCRIBE` are not exposed yet in the worker workbench.

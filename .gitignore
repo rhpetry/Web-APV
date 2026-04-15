@@ -6,9 +6,9 @@ dist/
 wheels/
 *.egg-info
 
-# Virtual environments
-.venv
+# Node and Vite
+node_modules/
+.vite/
 
-# Runtime triplestore storage
-data/triplestore/uploads/
-data/triplestore/sessions/
+# Python virtual environments from earlier versions
+.venv

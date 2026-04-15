@@ -1,0 +1,687 @@
+<?xml version="1.0"?>
+<rdf:RDF xmlns="http://www.w3.org/2002/07/owl#"
+     xml:base="http://www.w3.org/2002/07/owl"
+     xmlns:dc="http://purl.org/dc/elements/1.1/"
+     xmlns:apv="http://www.inf.ufrgs.br/ontologies/APV#"
+     xmlns:owl="http://www.w3.org/2002/07/owl#"
+     xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+     xmlns:xml="http://www.w3.org/XML/1998/namespace"
+     xmlns:xsd="http://www.w3.org/2001/XMLSchema#"
+     xmlns:dcam="http://purl.org/dc/dcam/"
+     xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
+     xmlns:skos="http://www.w3.org/2004/02/skos/core#"
+     xmlns:terms="http://purl.org/dc/terms/">
+    <Ontology rdf:about="http://www.inf.ufrgs.br/ontologies/APV">
+        <terms:contributor xml:lang="en">Nicolau O. Santos, Haroldo R. S. Silva, Mara Abel</terms:contributor>
+        <terms:creator xml:lang="en">Rafael Humann Petry</terms:creator>
+        <terms:description xml:lang="en">The Annotation Property Verificator (APV) methodology was developed at the Federal Uninversity of Rio Grande do Sul (UFRGS) as part of a methodology for safeguarding consistency in annotation properties. The methology is comprised of an OWL file, containing the types of user-configurable constraints, and a software application that checks the ontology&apos;s conformance to those constraints.
+The APV properties are designed to be simultaneously human-readable and machine-processable, allowing quality expectations to be explicitly stated and automatically verified by a validation engine. By encoding annotation-related constraints within the ontology itself, it promotes transparency, consistency, and tool-independent interpretation.</terms:description>
+        <terms:language xml:lang="en">en</terms:language>
+        <terms:title xml:lang="en">Annotation Property Verificator</terms:title>
+        <rdfs:label xml:lang="en">Annotation Property Verificator</rdfs:label>
+        <rdfs:seeAlso xml:lang="en">Link for the paper once published</rdfs:seeAlso>
+        <rdfs:seeAlso xml:lang="en">apv-web url once published</rdfs:seeAlso>
+    </Ontology>
+    
+
+
+    <!-- 
+    ///////////////////////////////////////////////////////////////////////////////////////
+    //
+    // Annotation properties
+    //
+    ///////////////////////////////////////////////////////////////////////////////////////
+     -->
+
+    
+
+
+    <!-- http://purl.org/dc/dcam/rangeIncludes -->
+
+    <AnnotationProperty rdf:about="http://purl.org/dc/dcam/rangeIncludes"/>
+    
+
+
+    <!-- http://purl.org/dc/elements/1.1/contributor -->
+
+    <AnnotationProperty rdf:about="http://purl.org/dc/elements/1.1/contributor">
+        <terms:description xml:lang="en">The guidelines for using names of persons or organizations as creators also apply to contributors.  Typically, the name of a Contributor should be used to indicate the entity.</terms:description>
+        <terms:issued rdf:datatype="http://www.w3.org/2001/XMLSchema#date">1999-07-02</terms:issued>
+        <rdfs:comment xml:lang="en">An entity responsible for making contributions to the resource.</rdfs:comment>
+        <rdfs:isDefinedBy rdf:resource="http://purl.org/dc/elements/1.1/"/>
+        <rdfs:label xml:lang="en">Contributor</rdfs:label>
+        <skos:note xml:lang="en">A [second property](/specifications/dublin-core/dcmi-terms/#http://purl.org/dc/terms/contributor) with the same name as this property has been declared in the [dcterms: namespace](http://purl.org/dc/terms/).  See the Introduction to the document [DCMI Metadata Terms](/specifications/dublin-core/dcmi-terms/) for an explanation.</skos:note>
+    </AnnotationProperty>
+    
+
+
+    <!-- http://purl.org/dc/elements/1.1/creator -->
+
+    <AnnotationProperty rdf:about="http://purl.org/dc/elements/1.1/creator">
+        <terms:description xml:lang="en">Examples of a Creator include a person, an organization, or a service. Typically, the name of a Creator should be used to indicate the entity.</terms:description>
+        <terms:issued rdf:datatype="http://www.w3.org/2001/XMLSchema#date">1999-07-02</terms:issued>
+        <rdfs:comment xml:lang="en">An entity primarily responsible for making the resource.</rdfs:comment>
+        <rdfs:isDefinedBy rdf:resource="http://purl.org/dc/elements/1.1/"/>
+        <rdfs:label xml:lang="en">Creator</rdfs:label>
+        <skos:note xml:lang="en">A [second property](/specifications/dublin-core/dcmi-terms/#http://purl.org/dc/terms/creator) with the same name as this property has been declared in the [dcterms: namespace](http://purl.org/dc/terms/).  See the Introduction to the document [DCMI Metadata Terms](/specifications/dublin-core/dcmi-terms/) for an explanation.</skos:note>
+    </AnnotationProperty>
+    
+
+
+    <!-- http://purl.org/dc/elements/1.1/description -->
+
+    <AnnotationProperty rdf:about="http://purl.org/dc/elements/1.1/description">
+        <terms:description xml:lang="en">Description may include but is not limited to: an abstract, a table of contents, a graphical representation, or a free-text account of the resource.</terms:description>
+        <terms:issued rdf:datatype="http://www.w3.org/2001/XMLSchema#date">1999-07-02</terms:issued>
+        <rdfs:comment xml:lang="en">An account of the resource.</rdfs:comment>
+        <rdfs:isDefinedBy rdf:resource="http://purl.org/dc/elements/1.1/"/>
+        <rdfs:label xml:lang="en">Description</rdfs:label>
+        <skos:note xml:lang="en">A [second property](/specifications/dublin-core/dcmi-terms/#http://purl.org/dc/terms/description) with the same name as this property has been declared in the [dcterms: namespace](http://purl.org/dc/terms/).  See the Introduction to the document [DCMI Metadata Terms](/specifications/dublin-core/dcmi-terms/) for an explanation.</skos:note>
+    </AnnotationProperty>
+    
+
+
+    <!-- http://purl.org/dc/elements/1.1/rights -->
+
+    <AnnotationProperty rdf:about="http://purl.org/dc/elements/1.1/rights">
+        <terms:description xml:lang="en">Typically, rights information includes a statement about various property rights associated with the resource, including intellectual property rights.</terms:description>
+        <terms:issued rdf:datatype="http://www.w3.org/2001/XMLSchema#date">1999-07-02</terms:issued>
+        <rdfs:comment xml:lang="en">Information about rights held in and over the resource.</rdfs:comment>
+        <rdfs:isDefinedBy rdf:resource="http://purl.org/dc/elements/1.1/"/>
+        <rdfs:label xml:lang="en">Rights</rdfs:label>
+        <skos:note xml:lang="en">A [second property](/specifications/dublin-core/dcmi-terms/#http://purl.org/dc/terms/rights) with the same name as this property has been declared in the [dcterms: namespace](http://purl.org/dc/terms/).  See the Introduction to the document [DCMI Metadata Terms](/specifications/dublin-core/dcmi-terms/) for an explanation.</skos:note>
+    </AnnotationProperty>
+    
+
+
+    <!-- http://purl.org/dc/elements/1.1/source -->
+
+    <AnnotationProperty rdf:about="http://purl.org/dc/elements/1.1/source">
+        <terms:description xml:lang="en">The described resource may be derived from the related resource in whole or in part. Recommended best practice is to identify the related resource by means of a string conforming to a formal identification system.</terms:description>
+        <terms:issued rdf:datatype="http://www.w3.org/2001/XMLSchema#date">1999-07-02</terms:issued>
+        <rdfs:comment xml:lang="en">A related resource from which the described resource is derived.</rdfs:comment>
+        <rdfs:isDefinedBy rdf:resource="http://purl.org/dc/elements/1.1/"/>
+        <rdfs:label xml:lang="en">Source</rdfs:label>
+        <skos:note xml:lang="en">A [second property](/specifications/dublin-core/dcmi-terms/#http://purl.org/dc/terms/source) with the same name as this property has been declared in the [dcterms: namespace](http://purl.org/dc/terms/).  See the Introduction to the document [DCMI Metadata Terms](/specifications/dublin-core/dcmi-terms/) for an explanation.</skos:note>
+    </AnnotationProperty>
+    
+
+
+    <!-- http://purl.org/dc/elements/1.1/subject -->
+
+    <AnnotationProperty rdf:about="http://purl.org/dc/elements/1.1/subject">
+        <terms:description xml:lang="en">Typically, the subject will be represented using keywords, key phrases, or classification codes.  Recommended best practice is to use a controlled vocabulary.</terms:description>
+        <terms:issued rdf:datatype="http://www.w3.org/2001/XMLSchema#date">1999-07-02</terms:issued>
+        <rdfs:comment xml:lang="en">The topic of the resource.</rdfs:comment>
+        <rdfs:isDefinedBy rdf:resource="http://purl.org/dc/elements/1.1/"/>
+        <rdfs:label xml:lang="en">Subject</rdfs:label>
+        <skos:note xml:lang="en">A [second property](/specifications/dublin-core/dcmi-terms/#http://purl.org/dc/terms/subject) with the same name as this property has been declared in the [dcterms: namespace](http://purl.org/dc/terms/).  See the Introduction to the document [DCMI Metadata Terms](/specifications/dublin-core/dcmi-terms/) for an explanation.</skos:note>
+    </AnnotationProperty>
+    
+
+
+    <!-- http://purl.org/dc/elements/1.1/title -->
+
+    <AnnotationProperty rdf:about="http://purl.org/dc/elements/1.1/title">
+        <terms:issued rdf:datatype="http://www.w3.org/2001/XMLSchema#date">1999-07-02</terms:issued>
+        <rdfs:comment xml:lang="en">A name given to the resource.</rdfs:comment>
+        <rdfs:isDefinedBy rdf:resource="http://purl.org/dc/elements/1.1/"/>
+        <rdfs:label xml:lang="en">Title</rdfs:label>
+        <skos:note xml:lang="en">A [second property](/specifications/dublin-core/dcmi-terms/#http://purl.org/dc/terms/title) with the same name as this property has been declared in the [dcterms: namespace](http://purl.org/dc/terms/).  See the Introduction to the document [DCMI Metadata Terms](/specifications/dublin-core/dcmi-terms/) for an explanation.</skos:note>
+    </AnnotationProperty>
+    
+
+
+    <!-- http://purl.org/dc/terms/abstract -->
+
+    <AnnotationProperty rdf:about="http://purl.org/dc/terms/abstract">
+        <rdfs:comment xml:lang="en">A summary of the resource.</rdfs:comment>
+        <rdfs:isDefinedBy rdf:resource="http://purl.org/dc/terms/"/>
+        <rdfs:label xml:lang="en">Abstract</rdfs:label>
+        <rdfs:subPropertyOf rdf:resource="http://purl.org/dc/elements/1.1/description"/>
+        <rdfs:subPropertyOf rdf:resource="http://purl.org/dc/terms/description"/>
+    </AnnotationProperty>
+    
+
+
+    <!-- http://purl.org/dc/terms/accessRights -->
+
+    <AnnotationProperty rdf:about="http://purl.org/dc/terms/accessRights">
+        <dcam:rangeIncludes rdf:resource="http://purl.org/dc/terms/RightsStatement"/>
+        <terms:description xml:lang="en">Access Rights may include information regarding access or restrictions based on privacy, security, or other policies.</terms:description>
+        <rdfs:comment xml:lang="en">Information about who access the resource or an indication of its security status.</rdfs:comment>
+        <rdfs:isDefinedBy rdf:resource="http://purl.org/dc/terms/"/>
+        <rdfs:label xml:lang="en">Access Rights</rdfs:label>
+        <rdfs:subPropertyOf rdf:resource="http://purl.org/dc/elements/1.1/rights"/>
+        <rdfs:subPropertyOf rdf:resource="http://purl.org/dc/terms/rights"/>
+    </AnnotationProperty>
+    
+
+
+    <!-- http://purl.org/dc/terms/alternative -->
+
+    <AnnotationProperty rdf:about="http://purl.org/dc/terms/alternative">
+        <terms:description xml:lang="en">The distinction between titles and alternative titles is application-specific.</terms:description>
+        <rdfs:comment xml:lang="en">An alternative name for the resource.</rdfs:comment>
+        <rdfs:isDefinedBy rdf:resource="http://purl.org/dc/terms/"/>
+        <rdfs:label xml:lang="en">Alternative Title</rdfs:label>
+        <rdfs:subPropertyOf rdf:resource="http://purl.org/dc/elements/1.1/title"/>
+    </AnnotationProperty>
+    
+
+
+    <!-- http://purl.org/dc/terms/contributor -->
+
+    <AnnotationProperty rdf:about="http://purl.org/dc/terms/contributor">
+        <dcam:rangeIncludes rdf:resource="http://purl.org/dc/terms/Agent"/>
+        <terms:description xml:lang="en">The guidelines for using names of persons or organizations as creators apply to contributors.</terms:description>
+        <rdfs:comment xml:lang="en">An entity responsible for making contributions to the resource.</rdfs:comment>
+        <rdfs:isDefinedBy rdf:resource="http://purl.org/dc/terms/"/>
+        <rdfs:label xml:lang="en">Contributor</rdfs:label>
+        <rdfs:subPropertyOf rdf:resource="http://purl.org/dc/elements/1.1/contributor"/>
+    </AnnotationProperty>
+    
+
+
+    <!-- http://purl.org/dc/terms/creator -->
+
+    <AnnotationProperty rdf:about="http://purl.org/dc/terms/creator">
+        <dcam:rangeIncludes rdf:resource="http://purl.org/dc/terms/Agent"/>
+        <terms:description xml:lang="en">Recommended practice is to identify the creator with a URI.  If this is not possible or feasible, a literal value that identifies the creator may be provided.</terms:description>
+        <rdfs:comment xml:lang="en">An entity responsible for making the resource.</rdfs:comment>
+        <rdfs:isDefinedBy rdf:resource="http://purl.org/dc/terms/"/>
+        <rdfs:label xml:lang="en">Creator</rdfs:label>
+        <rdfs:subPropertyOf rdf:resource="http://purl.org/dc/elements/1.1/creator"/>
+        <rdfs:subPropertyOf rdf:resource="http://purl.org/dc/terms/contributor"/>
+    </AnnotationProperty>
+    
+
+
+    <!-- http://purl.org/dc/terms/description -->
+
+    <AnnotationProperty rdf:about="http://purl.org/dc/terms/description">
+        <terms:description xml:lang="en">Description may include but is not limited to: an abstract, a table of contents, a graphical representation, or a free-text account of the resource.</terms:description>
+        <rdfs:comment xml:lang="en">An account of the resource.</rdfs:comment>
+        <rdfs:isDefinedBy rdf:resource="http://purl.org/dc/terms/"/>
+        <rdfs:label xml:lang="en">Description</rdfs:label>
+        <rdfs:subPropertyOf rdf:resource="http://purl.org/dc/elements/1.1/description"/>
+    </AnnotationProperty>
+    
+
+
+    <!-- http://purl.org/dc/terms/issued -->
+
+    <AnnotationProperty rdf:about="http://purl.org/dc/terms/issued"/>
+    
+
+
+    <!-- http://purl.org/dc/terms/language -->
+
+    <AnnotationProperty rdf:about="http://purl.org/dc/terms/language"/>
+    
+
+
+    <!-- http://purl.org/dc/terms/license -->
+
+    <AnnotationProperty rdf:about="http://purl.org/dc/terms/license">
+        <dcam:rangeIncludes rdf:resource="http://purl.org/dc/terms/LicenseDocument"/>
+        <terms:description xml:lang="en">Recommended practice is to identify the license document with a URI. If this is not possible or feasible, a literal value that identifies the license may be provided.</terms:description>
+        <rdfs:comment xml:lang="en">A legal document giving official permission to do something with the resource.</rdfs:comment>
+        <rdfs:isDefinedBy rdf:resource="http://purl.org/dc/terms/"/>
+        <rdfs:label xml:lang="en">License</rdfs:label>
+        <rdfs:subPropertyOf rdf:resource="http://purl.org/dc/elements/1.1/rights"/>
+        <rdfs:subPropertyOf rdf:resource="http://purl.org/dc/terms/rights"/>
+    </AnnotationProperty>
+    
+
+
+    <!-- http://purl.org/dc/terms/relation -->
+
+    <AnnotationProperty rdf:about="http://purl.org/dc/terms/relation"/>
+    
+
+
+    <!-- http://purl.org/dc/terms/rights -->
+
+    <AnnotationProperty rdf:about="http://purl.org/dc/terms/rights">
+        <dcam:rangeIncludes rdf:resource="http://purl.org/dc/terms/RightsStatement"/>
+        <terms:description xml:lang="en">Typically, rights information includes a statement about various property rights associated with the resource, including intellectual property rights.  Recommended practice is to refer to a rights statement with a URI.  If this is not possible or feasible, a literal value (name, label, or short text) may be provided.</terms:description>
+        <rdfs:comment xml:lang="en">Information about rights held in and over the resource.</rdfs:comment>
+        <rdfs:isDefinedBy rdf:resource="http://purl.org/dc/terms/"/>
+        <rdfs:label xml:lang="en">Rights</rdfs:label>
+        <rdfs:subPropertyOf rdf:resource="http://purl.org/dc/elements/1.1/rights"/>
+    </AnnotationProperty>
+    
+
+
+    <!-- http://purl.org/dc/terms/source -->
+
+    <AnnotationProperty rdf:about="http://purl.org/dc/terms/source">
+        <terms:description xml:lang="en">This property is intended to be used with non-literal values. The described resource may be derived from the related resource in whole or in part. Best practice is to identify the related resource by means of a URI or a string conforming to a formal identification system.</terms:description>
+        <rdfs:comment xml:lang="en">A related resource from which the described resource is derived.</rdfs:comment>
+        <rdfs:isDefinedBy rdf:resource="http://purl.org/dc/terms/"/>
+        <rdfs:label xml:lang="en">Source</rdfs:label>
+        <rdfs:subPropertyOf rdf:resource="http://purl.org/dc/elements/1.1/source"/>
+        <rdfs:subPropertyOf rdf:resource="http://purl.org/dc/terms/relation"/>
+    </AnnotationProperty>
+    
+
+
+    <!-- http://purl.org/dc/terms/subject -->
+
+    <AnnotationProperty rdf:about="http://purl.org/dc/terms/subject">
+        <terms:description xml:lang="en">Recommended practice is to refer to the subject with a URI. If this is not possible or feasible, a literal value that identifies the subject may be provided. Both should preferably refer to a subject in a controlled vocabulary.</terms:description>
+        <rdfs:comment xml:lang="en">A topic of the resource.</rdfs:comment>
+        <rdfs:isDefinedBy rdf:resource="http://purl.org/dc/terms/"/>
+        <rdfs:label xml:lang="en">Subject</rdfs:label>
+        <rdfs:subPropertyOf rdf:resource="http://purl.org/dc/elements/1.1/subject"/>
+    </AnnotationProperty>
+    
+
+
+    <!-- http://purl.org/dc/terms/tableOfContents -->
+
+    <AnnotationProperty rdf:about="http://purl.org/dc/terms/tableOfContents">
+        <rdfs:comment xml:lang="en">A list of subunits of the resource.</rdfs:comment>
+        <rdfs:isDefinedBy rdf:resource="http://purl.org/dc/terms/"/>
+        <rdfs:label xml:lang="en">Table Of Contents</rdfs:label>
+        <rdfs:subPropertyOf rdf:resource="http://purl.org/dc/elements/1.1/description"/>
+        <rdfs:subPropertyOf rdf:resource="http://purl.org/dc/terms/description"/>
+    </AnnotationProperty>
+    
+
+
+    <!-- http://purl.org/dc/terms/title -->
+
+    <AnnotationProperty rdf:about="http://purl.org/dc/terms/title">
+        <rdfs:comment xml:lang="en">A name given to the resource.</rdfs:comment>
+        <rdfs:isDefinedBy rdf:resource="http://purl.org/dc/terms/"/>
+        <rdfs:label xml:lang="en">Title</rdfs:label>
+        <rdfs:subPropertyOf rdf:resource="http://purl.org/dc/elements/1.1/title"/>
+    </AnnotationProperty>
+    
+
+
+    <!-- http://www.inf.ufrgs.br/ontologies/APV#AnnotationPropertyDefinitionAnnotation -->
+
+    <AnnotationProperty rdf:about="http://www.inf.ufrgs.br/ontologies/APV#AnnotationPropertyDefinitionAnnotation">
+        <terms:language xml:lang="en">An annotation property that annotates the definition of an owl:AnnotationProperty</terms:language>
+        <rdfs:label xml:lang="en">Annotation property definition annotation</rdfs:label>
+        <rdfs:subPropertyOf rdf:resource="http://www.inf.ufrgs.br/ontologies/APV#AnnotationPropertyVerificatorAnnotation"/>
+    </AnnotationProperty>
+    
+
+
+    <!-- http://www.inf.ufrgs.br/ontologies/APV#AnnotationPropertyVerificatorAnnotation -->
+
+    <AnnotationProperty rdf:about="http://www.inf.ufrgs.br/ontologies/APV#AnnotationPropertyVerificatorAnnotation">
+        <rdfs:comment xml:lang="en">This is the root annotation for the APV methodology constraints.
+
+Protégé note: If using APV in an ontology on protégé for the first time, remember to add its prefix under &apos;Active ontology &gt; Ontology Prefixes&apos;</rdfs:comment>
+        <rdfs:label xml:lang="en">Annotation property verificator annotation</rdfs:label>
+        <rdfs:seeAlso xml:lang="en">Paper once published</rdfs:seeAlso>
+        <rdfs:seeAlso xml:lang="en">apv-web url once published</rdfs:seeAlso>
+    </AnnotationProperty>
+    
+
+
+    <!-- http://www.inf.ufrgs.br/ontologies/APV#AnnotationRegularExpression -->
+
+    <AnnotationProperty rdf:about="http://www.inf.ufrgs.br/ontologies/APV#AnnotationRegularExpression">
+        <terms:description xml:lang="en">The apv:AnnotationRegularExpression annotation enforces a syntactic convention for annotation values using regular expressions. This property is applied to an owl:AnnotationProperty to specify that all values of that annotation property must match the specified regular expression pattern. This ensures that annotations conform to defined formatting conventions and structural requirements.</terms:description>
+        <rdfs:label xml:lang="en">Annotation regular expression</rdfs:label>
+        <rdfs:seeAlso xml:lang="en">Paper once published</rdfs:seeAlso>
+        <rdfs:seeAlso xml:lang="en">apv-web url once published</rdfs:seeAlso>
+        <skos:example xml:lang="en">rdfs:label (owl:AnnotationProperty) --apv:AnnotationRegularExpression--&gt; &quot;[a-zA-ZÀ-ú.;,]*&quot;</skos:example>
+        <rdfs:subPropertyOf rdf:resource="http://www.inf.ufrgs.br/ontologies/APV#AnnotationPropertyDefinitionAnnotation"/>
+        <rdfs:range rdf:resource="http://www.inf.ufrgs.br/ontologies/APV#regularExpression"/>
+    </AnnotationProperty>
+    
+
+
+    <!-- http://www.inf.ufrgs.br/ontologies/APV#ClassDefinitionAnnotation -->
+
+    <AnnotationProperty rdf:about="http://www.inf.ufrgs.br/ontologies/APV#ClassDefinitionAnnotation">
+        <rdfs:comment xml:lang="en">An annotation property that annotates an owl:Class.</rdfs:comment>
+        <rdfs:label xml:lang="en">Class definition annotation</rdfs:label>
+        <rdfs:subPropertyOf rdf:resource="http://www.inf.ufrgs.br/ontologies/APV#AnnotationPropertyVerificatorAnnotation"/>
+    </AnnotationProperty>
+    
+
+
+    <!-- http://www.inf.ufrgs.br/ontologies/APV#ClassMinAnnotationCoverage -->
+
+    <AnnotationProperty rdf:about="http://www.inf.ufrgs.br/ontologies/APV#ClassMinAnnotationCoverage">
+        <terms:description xml:lang="en">The apv:ClassMinAnnotationCoverage annotation specifies mandatory annotation properties and cardinality requirements for classes in the ontology. The value consists of a sequence of annotation property URIs and optional cardinality constraints (e.g., &quot;2^skos:example&quot; means at least 2 instances of skos:example). This ensures that classes meet minimum documentation and annotation standards. The cardinality can be specified as a superscript notation where a number precedes a caret (^) and the annotation property IRI.</terms:description>
+        <rdfs:label xml:lang="en">Class minimum annotation coverage</rdfs:label>
+        <rdfs:seeAlso xml:lang="en">Paper once published</rdfs:seeAlso>
+        <rdfs:seeAlso xml:lang="en">apv-web url once published</rdfs:seeAlso>
+        <skos:example xml:lang="en">MyOntology (owl:Ontology) --apv:ClassMinAnnotationCoverage--&gt; &quot;rdfs:label skos:prefLabel skos:definition 2^skos:example&quot;</skos:example>
+        <rdfs:subPropertyOf rdf:resource="http://www.inf.ufrgs.br/ontologies/APV#OntologyHeaderAnnotation"/>
+        <rdfs:range rdf:resource="http://www.inf.ufrgs.br/ontologies/APV#annotationCoverage"/>
+    </AnnotationProperty>
+    
+
+
+    <!-- http://www.inf.ufrgs.br/ontologies/APV#ClassURIFormationRule -->
+
+    <AnnotationProperty rdf:about="http://www.inf.ufrgs.br/ontologies/APV#ClassURIFormationRule">
+        <terms:description xml:lang="en">The apv:ClassURIFormationRule annotation specifies a constraint on the formation of URIs for classes asserted in the ontology. This rule ensures that all class URIs follow an explicitly stated formation rule in the form of a regular expression. The main purpose is to serve as a guideline to ensure that semantic content is not directly encoded into entity identifiers, thus maintaining the distinction between identity and linguistic representation and preventing any potential user behavior or assumptions.</terms:description>
+        <rdfs:label xml:lang="en">Class URI formation rule</rdfs:label>
+        <rdfs:seeAlso xml:lang="en">Paper once published</rdfs:seeAlso>
+        <rdfs:seeAlso xml:lang="en">apv-web url once published</rdfs:seeAlso>
+        <skos:example xml:lang="en">MyOntology (owl:Ontology) --apv:ClassURIFormationRule--&gt; &quot;MyOntoClass_[0-9]{5}&quot;</skos:example>
+        <rdfs:subPropertyOf rdf:resource="http://www.inf.ufrgs.br/ontologies/APV#OntologyHeaderAnnotation"/>
+        <rdfs:range rdf:resource="http://www.inf.ufrgs.br/ontologies/APV#regularExpression"/>
+    </AnnotationProperty>
+    
+
+
+    <!-- http://www.inf.ufrgs.br/ontologies/APV#GlobalMinimumLanguageCoverage -->
+
+    <AnnotationProperty rdf:about="http://www.inf.ufrgs.br/ontologies/APV#GlobalMinimumLanguageCoverage">
+        <terms:description xml:lang="en">The apv:GlobalMinLanguageCoverage annotation indicates that all annotation properties expressed as RDF plain literals in the ontology must be accompanied by annotations of the same property type but with different language tags. Language tags are used to identify the natural language that is intended for human communication, and the syntax and vocabulary of language tags are maintained by the Internet Assigned Numbers Authority in the language tag registry.</terms:description>
+        <rdfs:label xml:lang="en">Global minimum language coverage</rdfs:label>
+        <rdfs:seeAlso xml:lang="en">Paper once published</rdfs:seeAlso>
+        <rdfs:seeAlso xml:lang="en">apv-web url once published</rdfs:seeAlso>
+        <skos:example xml:lang="en">MyOntology (owl:Ontology) --apv:GlobalMinLanguageCoverage--&gt; &quot;en-US es pt-BR&quot;</skos:example>
+        <rdfs:subPropertyOf rdf:resource="http://www.inf.ufrgs.br/ontologies/APV#OntologyHeaderAnnotation"/>
+        <rdfs:range rdf:resource="http://www.inf.ufrgs.br/ontologies/APV#languageCoverage"/>
+    </AnnotationProperty>
+    
+
+
+    <!-- http://www.inf.ufrgs.br/ontologies/APV#InstanceMinAnnotationCoverage -->
+
+    <AnnotationProperty rdf:about="http://www.inf.ufrgs.br/ontologies/APV#InstanceMinAnnotationCoverage">
+        <terms:description xml:lang="en">The apv:InstanceMinAnnotationCoverage annotation specifies mandatory annotation properties and cardinality requirements for instances in the ontology. The value consists of a sequence of annotation property URIs and optional cardinality constraints (e.g., &quot;2^skos:example&quot; means at least 2 instances of skos:example). This ensures that instances meet minimum documentation and annotation standards. The cardinality can be specified as a superscript notation where a number precedes a caret (^) and the annotation property IRI.</terms:description>
+        <rdfs:label xml:lang="en">Instance minimum annotation coverage</rdfs:label>
+        <rdfs:seeAlso xml:lang="en">Paper once published</rdfs:seeAlso>
+        <rdfs:seeAlso xml:lang="en">apv-web url once published</rdfs:seeAlso>
+        <skos:example xml:lang="en">MyOntology (owl:Ontology) --apv:InstanceMinAnnotationCoverage--&gt; &quot;rdfs:label 2ˆskos:example&quot;</skos:example>
+        <rdfs:subPropertyOf rdf:resource="http://www.inf.ufrgs.br/ontologies/APV#OntologyHeaderAnnotation"/>
+        <rdfs:range rdf:resource="http://www.inf.ufrgs.br/ontologies/APV#annotationCoverage"/>
+    </AnnotationProperty>
+    
+
+
+    <!-- http://www.inf.ufrgs.br/ontologies/APV#InstanceOfMinAnnotationCoverage -->
+
+    <AnnotationProperty rdf:about="http://www.inf.ufrgs.br/ontologies/APV#InstanceOfMinAnnotationCoverage">
+        <terms:description xml:lang="en">The apv:InstanceOfMinAnnotationCoverage annotation specifies mandatory annotation properties and cardinality requirements for instances of a specific class. This property is applied to an owl:Class to enforce that all instances of that class must have specific annotations with optional cardinality constraints (e.g., &quot;2^skos:example&quot; means at least 2 instances of skos:example). This provides class-scoped annotation constraints that complement ontology-wide coverage requirements.</terms:description>
+        <rdfs:label xml:lang="en">Instance of minimum annotation coverage</rdfs:label>
+        <rdfs:seeAlso xml:lang="en">Paper once published</rdfs:seeAlso>
+        <rdfs:seeAlso xml:lang="en">apv-web url once published</rdfs:seeAlso>
+        <skos:example xml:lang="en">MyClass (owl:Class) --apv:InstanceOfMinAnnotationCoverage--&gt; &quot;myAnnotations:llmFriendlyDescription&quot;</skos:example>
+        <rdfs:subPropertyOf rdf:resource="http://www.inf.ufrgs.br/ontologies/APV#ClassDefinitionAnnotation"/>
+        <rdfs:range rdf:resource="http://www.inf.ufrgs.br/ontologies/APV#annotationCoverage"/>
+    </AnnotationProperty>
+    
+
+
+    <!-- http://www.inf.ufrgs.br/ontologies/APV#InstanceURIFormationRule -->
+
+    <AnnotationProperty rdf:about="http://www.inf.ufrgs.br/ontologies/APV#InstanceURIFormationRule">
+        <terms:description xml:lang="en">The apv:InstanceURIFormationRule annotation specifies a constraint on the formation of URIs for instances asserted in the ontology. This rule ensures that all instance URIs follow an explicitly stated formation rule in the form of a regular expression. The main purpose is to serve as a guideline to ensure that semantic content is not directly encoded into entity identifiers, thus maintaining the distinction between identity and linguistic representation and preventing any potential user behavior or assumptions.</terms:description>
+        <rdfs:label xml:lang="en">Instance URI formation rule</rdfs:label>
+        <rdfs:seeAlso xml:lang="en">Paper once published</rdfs:seeAlso>
+        <rdfs:seeAlso xml:lang="en">apv-web url once published</rdfs:seeAlso>
+        <skos:example xml:lang="en">MyOntology (owl:Ontology) --apv:InstanceURIFormationRule--&gt; &quot;MyOntoInstance_[0-9]{5}&quot;</skos:example>
+        <rdfs:subPropertyOf rdf:resource="http://www.inf.ufrgs.br/ontologies/APV#OntologyHeaderAnnotation"/>
+        <rdfs:range rdf:resource="http://www.inf.ufrgs.br/ontologies/APV#regularExpression"/>
+    </AnnotationProperty>
+    
+
+
+    <!-- http://www.inf.ufrgs.br/ontologies/APV#MaxAnnotationLength -->
+
+    <AnnotationProperty rdf:about="http://www.inf.ufrgs.br/ontologies/APV#MaxAnnotationLength">
+        <terms:description xml:lang="en">The apv:MaxAnnotationLength annotation enforces a maximum character length for annotation values. This property is applied to an owl:AnnotationProperty to specify that all values of that annotation property must not exceed the specified number of characters. This ensures that annotations remain concise and do not exceed reasonable documentation limits.</terms:description>
+        <rdfs:label xml:lang="en">Maximum annotation length</rdfs:label>
+        <rdfs:seeAlso xml:lang="en">Paper once published</rdfs:seeAlso>
+        <rdfs:seeAlso xml:lang="en">apv-web url once published</rdfs:seeAlso>
+        <skos:example xml:lang="en">rdfs:label (owl:AnnotationProperty) --apv:MaxAnnotationLength--&gt; 400</skos:example>
+        <rdfs:subPropertyOf rdf:resource="http://www.inf.ufrgs.br/ontologies/APV#AnnotationPropertyDefinitionAnnotation"/>
+        <rdfs:range rdf:resource="http://www.inf.ufrgs.br/ontologies/APV#length"/>
+    </AnnotationProperty>
+    
+
+
+    <!-- http://www.inf.ufrgs.br/ontologies/APV#MinAnnotationLength -->
+
+    <AnnotationProperty rdf:about="http://www.inf.ufrgs.br/ontologies/APV#MinAnnotationLength">
+        <terms:description xml:lang="en">The apv:MinAnnotationLength annotation enforces a minimum character length for annotation values. This property is applied to an owl:AnnotationProperty to specify that all values of that annotation property must contain at least the specified number of characters. This ensures that annotations meet minimum verbosity and informativeness standards.</terms:description>
+        <rdfs:label xml:lang="en">Minimum annotation length</rdfs:label>
+        <rdfs:seeAlso xml:lang="en">Paper once published</rdfs:seeAlso>
+        <rdfs:seeAlso xml:lang="en">apv-web url once published</rdfs:seeAlso>
+        <skos:example xml:lang="en">rdfs:label (owl:AnnotationProperty) --apv:MinAnnotationLength--&gt; 20</skos:example>
+        <rdfs:subPropertyOf rdf:resource="http://www.inf.ufrgs.br/ontologies/APV#AnnotationPropertyDefinitionAnnotation"/>
+        <rdfs:range rdf:resource="http://www.inf.ufrgs.br/ontologies/APV#length"/>
+    </AnnotationProperty>
+    
+
+
+    <!-- http://www.inf.ufrgs.br/ontologies/APV#OntologyHeaderAnnotation -->
+
+    <AnnotationProperty rdf:about="http://www.inf.ufrgs.br/ontologies/APV#OntologyHeaderAnnotation">
+        <rdfs:comment xml:lang="en">An annotation property that annotates an ontology.
+In Protégé, they can be viewed under the &apos;Active ontology&apos; tab, and in plain RDF, they can be found on the ontology header.</rdfs:comment>
+        <rdfs:label xml:lang="en">Ontology header annotation</rdfs:label>
+        <rdfs:subPropertyOf rdf:resource="http://www.inf.ufrgs.br/ontologies/APV#AnnotationPropertyVerificatorAnnotation"/>
+    </AnnotationProperty>
+    
+
+
+    <!-- http://www.inf.ufrgs.br/ontologies/APV#RelationMinAnnotationCoverage -->
+
+    <AnnotationProperty rdf:about="http://www.inf.ufrgs.br/ontologies/APV#RelationMinAnnotationCoverage">
+        <terms:description xml:lang="en">The apv:RelationMinAnnotationCoverage annotation specifies mandatory annotation properties and cardinality requirements for relations (object properties) in the ontology. The value consists of a sequence of annotation property URIs and optional cardinality constraints (e.g., &quot;2^skos:example&quot; means at least 2 instances of skos:example). This ensures that relations meet minimum documentation and annotation standards. The cardinality can be specified as a superscript notation where a number precedes a caret (^) and the annotation property IRI.</terms:description>
+        <rdfs:label xml:lang="en">Relation minimum annotation coverage</rdfs:label>
+        <rdfs:seeAlso xml:lang="en">Paper once published</rdfs:seeAlso>
+        <rdfs:seeAlso xml:lang="en">apv-web url once published</rdfs:seeAlso>
+        <skos:example xml:lang="en">MyOntology (owl:Ontology) --apv:RelationMinAnnotationCoverage--&gt; &quot;rdfs:label skos:definition&quot;</skos:example>
+        <rdfs:subPropertyOf rdf:resource="http://www.inf.ufrgs.br/ontologies/APV#OntologyHeaderAnnotation"/>
+        <rdfs:range rdf:resource="http://www.inf.ufrgs.br/ontologies/APV#annotationCoverage"/>
+    </AnnotationProperty>
+    
+
+
+    <!-- http://www.inf.ufrgs.br/ontologies/APV#RelationURIFormationRule -->
+
+    <AnnotationProperty rdf:about="http://www.inf.ufrgs.br/ontologies/APV#RelationURIFormationRule">
+        <terms:description xml:lang="en">The apv:RelationURIFormationRule annotation specifies a constraint on the formation of URIs for relations (object properties) asserted in the ontology. This rule ensures that all relation URIs follow an explicitly stated formation rule in the form of a regular expression. The main purpose is to serve as a guideline to ensure that semantic content is not directly encoded into entity identifiers, thus maintaining the distinction between identity and linguistic representation and preventing any potential user behavior or assumptions.</terms:description>
+        <rdfs:label xml:lang="en">Relation URI formation rule</rdfs:label>
+        <rdfs:seeAlso xml:lang="en">Paper once published</rdfs:seeAlso>
+        <rdfs:seeAlso xml:lang="en">apv-web url once published</rdfs:seeAlso>
+        <skos:example xml:lang="en">MyOntology (owl:Ontology) --apv:RelationURIFormationRule--&gt; &quot;MyOntoRel_[0-9]{5}&quot;</skos:example>
+        <rdfs:subPropertyOf rdf:resource="http://www.inf.ufrgs.br/ontologies/APV#OntologyHeaderAnnotation"/>
+        <rdfs:range rdf:resource="http://www.inf.ufrgs.br/ontologies/APV#regularExpression"/>
+    </AnnotationProperty>
+    
+
+
+    <!-- http://www.w3.org/2004/02/skos/core#altLabel -->
+
+    <AnnotationProperty rdf:about="http://www.w3.org/2004/02/skos/core#altLabel">
+        <rdfs:comment xml:lang="en">The range of skos:altLabel is the class of RDF plain literals.</rdfs:comment>
+        <rdfs:comment xml:lang="en">skos:prefLabel, skos:altLabel and skos:hiddenLabel are pairwise disjoint properties.</rdfs:comment>
+        <rdfs:isDefinedBy rdf:resource="http://www.w3.org/2004/02/skos/core"/>
+        <rdfs:label xml:lang="en">alternative label</rdfs:label>
+        <skos:definition xml:lang="en">An alternative lexical label for a resource.</skos:definition>
+        <skos:example xml:lang="en">Acronyms, abbreviations, spelling variants, and irregular plural/singular forms may be included among the alternative labels for a concept. Mis-spelled terms are normally included as hidden labels (see skos:hiddenLabel).</skos:example>
+        <rdfs:subPropertyOf rdf:resource="http://www.w3.org/2000/01/rdf-schema#label"/>
+    </AnnotationProperty>
+    
+
+
+    <!-- http://www.w3.org/2004/02/skos/core#changeNote -->
+
+    <AnnotationProperty rdf:about="http://www.w3.org/2004/02/skos/core#changeNote">
+        <rdfs:isDefinedBy rdf:resource="http://www.w3.org/2004/02/skos/core"/>
+        <rdfs:label xml:lang="en">change note</rdfs:label>
+        <skos:definition xml:lang="en">A note about a modification to a concept.</skos:definition>
+        <rdfs:subPropertyOf rdf:resource="http://www.w3.org/2004/02/skos/core#note"/>
+    </AnnotationProperty>
+    
+
+
+    <!-- http://www.w3.org/2004/02/skos/core#definition -->
+
+    <AnnotationProperty rdf:about="http://www.w3.org/2004/02/skos/core#definition">
+        <rdfs:isDefinedBy rdf:resource="http://www.w3.org/2004/02/skos/core"/>
+        <rdfs:label xml:lang="en">definition</rdfs:label>
+        <skos:definition xml:lang="en">A statement or formal explanation of the meaning of a concept.</skos:definition>
+        <rdfs:subPropertyOf rdf:resource="http://www.w3.org/2004/02/skos/core#note"/>
+    </AnnotationProperty>
+    
+
+
+    <!-- http://www.w3.org/2004/02/skos/core#editorialNote -->
+
+    <AnnotationProperty rdf:about="http://www.w3.org/2004/02/skos/core#editorialNote">
+        <rdfs:isDefinedBy rdf:resource="http://www.w3.org/2004/02/skos/core"/>
+        <rdfs:label xml:lang="en">editorial note</rdfs:label>
+        <skos:definition xml:lang="en">A note for an editor, translator or maintainer of the vocabulary.</skos:definition>
+        <rdfs:subPropertyOf rdf:resource="http://www.w3.org/2004/02/skos/core#note"/>
+    </AnnotationProperty>
+    
+
+
+    <!-- http://www.w3.org/2004/02/skos/core#example -->
+
+    <AnnotationProperty rdf:about="http://www.w3.org/2004/02/skos/core#example">
+        <rdfs:isDefinedBy rdf:resource="http://www.w3.org/2004/02/skos/core"/>
+        <rdfs:label xml:lang="en">example</rdfs:label>
+        <skos:definition xml:lang="en">An example of the use of a concept.</skos:definition>
+        <rdfs:subPropertyOf rdf:resource="http://www.w3.org/2004/02/skos/core#note"/>
+    </AnnotationProperty>
+    
+
+
+    <!-- http://www.w3.org/2004/02/skos/core#hiddenLabel -->
+
+    <AnnotationProperty rdf:about="http://www.w3.org/2004/02/skos/core#hiddenLabel">
+        <rdfs:comment xml:lang="en">The range of skos:hiddenLabel is the class of RDF plain literals.</rdfs:comment>
+        <rdfs:comment xml:lang="en">skos:prefLabel, skos:altLabel and skos:hiddenLabel are pairwise disjoint properties.</rdfs:comment>
+        <rdfs:isDefinedBy rdf:resource="http://www.w3.org/2004/02/skos/core"/>
+        <rdfs:label xml:lang="en">hidden label</rdfs:label>
+        <skos:definition xml:lang="en">A lexical label for a resource that should be hidden when generating visual displays of the resource, but should still be accessible to free text search operations.</skos:definition>
+        <rdfs:subPropertyOf rdf:resource="http://www.w3.org/2000/01/rdf-schema#label"/>
+    </AnnotationProperty>
+    
+
+
+    <!-- http://www.w3.org/2004/02/skos/core#historyNote -->
+
+    <AnnotationProperty rdf:about="http://www.w3.org/2004/02/skos/core#historyNote">
+        <rdfs:isDefinedBy rdf:resource="http://www.w3.org/2004/02/skos/core"/>
+        <rdfs:label xml:lang="en">history note</rdfs:label>
+        <skos:definition xml:lang="en">A note about the past state/use/meaning of a concept.</skos:definition>
+        <rdfs:subPropertyOf rdf:resource="http://www.w3.org/2004/02/skos/core#note"/>
+    </AnnotationProperty>
+    
+
+
+    <!-- http://www.w3.org/2004/02/skos/core#note -->
+
+    <AnnotationProperty rdf:about="http://www.w3.org/2004/02/skos/core#note">
+        <rdfs:isDefinedBy rdf:resource="http://www.w3.org/2004/02/skos/core"/>
+        <rdfs:label xml:lang="en">note</rdfs:label>
+        <skos:definition xml:lang="en">A general note, for any purpose.</skos:definition>
+        <skos:scopeNote xml:lang="en">This property may be used directly, or as a super-property for more specific note types.</skos:scopeNote>
+    </AnnotationProperty>
+    
+
+
+    <!-- http://www.w3.org/2004/02/skos/core#prefLabel -->
+
+    <AnnotationProperty rdf:about="http://www.w3.org/2004/02/skos/core#prefLabel">
+        <rdfs:comment xml:lang="en">A resource has no more than one value of skos:prefLabel per language tag, and no more than one value of skos:prefLabel without language tag.</rdfs:comment>
+        <rdfs:comment xml:lang="en">The range of skos:prefLabel is the class of RDF plain literals.</rdfs:comment>
+        <rdfs:comment xml:lang="en">skos:prefLabel, skos:altLabel and skos:hiddenLabel are pairwise
+      disjoint properties.</rdfs:comment>
+        <rdfs:isDefinedBy rdf:resource="http://www.w3.org/2004/02/skos/core"/>
+        <rdfs:label xml:lang="en">preferred label</rdfs:label>
+        <skos:definition xml:lang="en">The preferred lexical label for a resource, in a given language.</skos:definition>
+        <rdfs:subPropertyOf rdf:resource="http://www.w3.org/2000/01/rdf-schema#label"/>
+    </AnnotationProperty>
+    
+
+
+    <!-- http://www.w3.org/2004/02/skos/core#scopeNote -->
+
+    <AnnotationProperty rdf:about="http://www.w3.org/2004/02/skos/core#scopeNote">
+        <rdfs:isDefinedBy rdf:resource="http://www.w3.org/2004/02/skos/core"/>
+        <rdfs:label xml:lang="en">scope note</rdfs:label>
+        <skos:definition xml:lang="en">A note that helps to clarify the meaning and/or the use of a concept.</skos:definition>
+        <rdfs:subPropertyOf rdf:resource="http://www.w3.org/2004/02/skos/core#note"/>
+    </AnnotationProperty>
+    
+
+
+    <!-- 
+    ///////////////////////////////////////////////////////////////////////////////////////
+    //
+    // Datatypes
+    //
+    ///////////////////////////////////////////////////////////////////////////////////////
+     -->
+
+    
+
+
+    <!-- http://www.inf.ufrgs.br/ontologies/APV#annotationCoverage -->
+
+    <rdfs:Datatype rdf:about="http://www.inf.ufrgs.br/ontologies/APV#annotationCoverage">
+        <rdfs:comment xml:lang="en">The property pattern apv:*MinAnnotationCoverage defines the required frequency of specific annotation types per language tag. If a cardinality is omitted, it defaults to 1.
+&lt;ValueOfAnnotationCoverage&gt; ::= ε |
+    &lt;annotation-property-URI&gt; |
+    &lt;annotation-property-URI&gt; &lt;ValueOfAnnotationCoverage&gt; |
+    &lt;positive-number&gt; “^” &lt;annotation-property-URI&gt; |
+    &lt;positive-number&gt; “^” &lt;annotation-property-URI&gt; &lt;ValueOfAnnotationCoverage&gt;</rdfs:comment>
+        <rdfs:label xml:lang="en">annotation coverage</rdfs:label>
+    </rdfs:Datatype>
+    
+
+
+    <!-- http://www.inf.ufrgs.br/ontologies/APV#languageCoverage -->
+
+    <rdfs:Datatype rdf:about="http://www.inf.ufrgs.br/ontologies/APV#languageCoverage">
+        <rdfs:comment xml:lang="en">The property apv:GlobalMinLanguageCoverage defines the language coverage of all annotations within the ontology.
+&lt;ValueOfLanguageCoverage&gt; ::= ε | 
+&lt;IANA-code&gt; |
+&lt;IANA-code&gt; &lt;ValueOfLanguageCoverage&gt;</rdfs:comment>
+        <rdfs:label xml:lang="en">language coverage</rdfs:label>
+    </rdfs:Datatype>
+    
+
+
+    <!-- http://www.inf.ufrgs.br/ontologies/APV#length -->
+
+    <rdfs:Datatype rdf:about="http://www.inf.ufrgs.br/ontologies/APV#length">
+        <rdfs:comment xml:lang="en">The property pattern apv:[Min|Max]AnnotationLength defines the length limits an annotation property value must conform to. Its value must be a number, and leaving the annotation blank means no restrictions:
+&lt;ValueOfLength&gt; ::=  ε | &lt;UnsignedIntegerGreaterThanZero&gt;</rdfs:comment>
+        <rdfs:label xml:lang="en">length</rdfs:label>
+    </rdfs:Datatype>
+    
+
+
+    <!-- http://www.inf.ufrgs.br/ontologies/APV#regularExpression -->
+
+    <rdfs:Datatype rdf:about="http://www.inf.ufrgs.br/ontologies/APV#regularExpression">
+        <rdfs:comment xml:lang="en">The property patterns apv:*URIFormationRule and apv:AnnotationRegularExpression define the required formats for elements within the ontology.
+&lt;ValueOfFormationRule&gt; ::= ε | &lt;RegularExpression&gt;</rdfs:comment>
+        <rdfs:label xml:lang="en">regular expression</rdfs:label>
+    </rdfs:Datatype>
+    
+
+
+    <!-- http://www.w3.org/2001/XMLSchema#date -->
+
+    <rdfs:Datatype rdf:about="http://www.w3.org/2001/XMLSchema#date"/>
+</rdf:RDF>
+
+
+
+<!-- Generated by the OWL API (version 4.5.29.2024-05-13T12:11:03Z) https://github.com/owlcs/owlapi -->
+
