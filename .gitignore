@@ -12,3 +12,6 @@ node_modules/
 
 # Python virtual environments from earlier versions
 .venv
+
+# Big ontologies
+data/ontologies/mondo-base-edited.owl
