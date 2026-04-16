@@ -1,5 +1,6 @@
 import languageTags from "language-tags";
-import * as $rdf from "rdflib";
+import initOxigraph, * as oxigraph from "oxigraph/web.js";
+import oxigraphWasmUrl from "oxigraph/web_bg.wasm?url";
 
 import { EVALUATION_KEYS, KEYCLOAK_CLIENT_ID, KEYCLOAK_SCOPE } from "../constants";
 import type {
@@ -12,18 +13,11 @@ import type {
   SourceSummary,
 } from "../types";
 
-type RdfTerm = {
-  termType: string;
-  value: string;
-  lang?: string;
-};
-type NamedNode = RdfTerm;
-type Literal = RdfTerm;
-type Statement = {
-  subject: RdfTerm;
-  object: RdfTerm;
-};
-type Store = $rdf.Store;
+type RdfTerm = oxigraph.Term;
+type NamedNode = oxigraph.NamedNode;
+type Literal = oxigraph.Literal;
+type Statement = oxigraph.Quad;
+type Store = oxigraph.Store;
 type ProgressReporter = (completed: number, total: number) => void;
 
 type LocalRuntimeSource = {
@@ -98,11 +92,19 @@ const PREFIX_MAP: Record<string, string> = {
   apv: "http://inf.ufrgs.br/ontologies/apv#",
 };
 
-const RDF = $rdf.Namespace(PREFIX_MAP.rdf);
-const RDFS = $rdf.Namespace(PREFIX_MAP.rdfs);
-const OWL = $rdf.Namespace(PREFIX_MAP.owl);
-const SKOS = $rdf.Namespace(PREFIX_MAP.skos);
-const APV = $rdf.Namespace(PREFIX_MAP.apv);
+const OXIGRAPH_INIT = initOxigraph(oxigraphWasmUrl);
+
+function rdf(localName: string): NamedNode {
+  return oxigraph.namedNode(`${PREFIX_MAP.rdf}${localName}`);
+}
+
+function owl(localName: string): NamedNode {
+  return oxigraph.namedNode(`${PREFIX_MAP.owl}${localName}`);
+}
+
+function apv(localName: string): NamedNode {
+  return oxigraph.namedNode(`${PREFIX_MAP.apv}${localName}`);
+}
 
 export function createEmptySnapshot(): EvaluationSnapshot {
   return {
@@ -139,18 +141,14 @@ export function buildEvaluationShell(key: EvaluationKey): EvaluationState {
 
 export async function createRuntimeSource(input: SourceInput): Promise<RuntimeSource> {
   if (input.mode === "local") {
-    const store = $rdf.graph();
+    await OXIGRAPH_INIT;
+    const store = new oxigraph.Store();
     const base = `https://web-apv.local/${encodeURIComponent(input.filename)}`;
     const contentType = inferContentType(input.filename, input.contentType);
     const prefixes = extractOntologyPrefixes(input.content);
-    await new Promise<void>((resolve, reject) => {
-      $rdf.parse(input.content, store, base, contentType, (error) => {
-        if (error) {
-          reject(error);
-          return;
-        }
-        resolve();
-      });
+    store.load(input.content, {
+      base_iri: base,
+      format: contentType,
     });
     return {
       mode: "local",
@@ -294,7 +292,7 @@ function readPairNumberArrayOverride(value: unknown, fallback: Array<[string, nu
   }
   const normalized = value
     .filter((item): item is [unknown, unknown] => Array.isArray(item) && item.length === 2)
-    .map(([left, right]) => [String(left).trim(), Number(right)] as [string, number])
+    .map(([left, right]) => [resolveConfiguredIri(String(left).trim()), Number(right)] as [string, number])
     .filter(([left, right]) => Boolean(left) && Number.isFinite(right));
   return normalized;
 }
@@ -305,7 +303,7 @@ function readPairStringArrayOverride(value: unknown, fallback: Array<[string, st
   }
   return value
     .filter((item): item is [unknown, unknown] => Array.isArray(item) && item.length === 2)
-    .map(([left, right]) => [String(left).trim(), String(right)] as [string, string])
+    .map(([left, right]) => [resolveConfiguredIri(String(left).trim()), String(right)] as [string, string])
     .filter(([left, right]) => Boolean(left) && Boolean(right));
 }
 
@@ -319,7 +317,7 @@ function readNestedCoverageOverride(
   return value
     .filter((item): item is [unknown, unknown] => Array.isArray(item) && item.length === 2)
     .map(([classIri, entries]) => [
-      String(classIri).trim(),
+      resolveConfiguredIri(String(classIri).trim()),
       readPairNumberArrayOverride(entries, []),
     ] as [string, Array<[string, number]>])
     .filter(([classIri]) => Boolean(classIri));
@@ -438,9 +436,6 @@ function resolveConfiguredIri(value: string): string {
 }
 
 function normalizeAnnotationLiteral(term: RdfTerm): string {
-  if (term.termType === "Literal") {
-    return term.value;
-  }
   return term.value;
 }
 
@@ -456,30 +451,28 @@ function dedupeNamedNodes(nodes: Array<RdfTerm | null | undefined>): NamedNode[]
 }
 
 function getOntologyNode(store: Store): NamedNode | null {
-  return dedupeNamedNodes(store.each(undefined, RDF("type"), OWL("Ontology"), undefined))[0] ?? null;
+  return dedupeNamedNodes(store.match(null, rdf("type"), owl("Ontology"), null).map((quad) => quad.subject))[0] ?? null;
 }
 
 function getNamedNodesByType(store: Store, types: NamedNode[]): NamedNode[] {
-  return dedupeNamedNodes(
-    types.flatMap((type) => store.each(undefined, RDF("type"), type as never, undefined) as unknown as RdfTerm[]),
-  );
+  return dedupeNamedNodes(types.flatMap((type) => store.match(null, rdf("type"), type, null).map((quad) => quad.subject)));
 }
 
 function getClassNodes(store: Store): NamedNode[] {
-  return getNamedNodesByType(store, [OWL("Class")]);
+  return getNamedNodesByType(store, [owl("Class")]);
 }
 
 function getRelationNodes(store: Store): NamedNode[] {
-  return getNamedNodesByType(store, [OWL("ObjectProperty"), OWL("DatatypeProperty"), OWL("AnnotationProperty")]);
+  return getNamedNodesByType(store, [owl("ObjectProperty"), owl("DatatypeProperty"), owl("AnnotationProperty")]);
 }
 
 function getAnnotationPropertyNodes(store: Store): NamedNode[] {
-  return getNamedNodesByType(store, [OWL("AnnotationProperty")]);
+  return getNamedNodesByType(store, [owl("AnnotationProperty")]);
 }
 
 function getInstanceNodes(store: Store): NamedNode[] {
   const classSet = new Set(getClassNodes(store).map((term) => term.value));
-  const candidates = store.statementsMatching(undefined, RDF("type"), undefined, undefined)
+  const candidates = store.match(null, rdf("type"), null, null)
     .filter((statement) => ensureNamedNode(statement.subject) && ensureNamedNode(statement.object))
     .filter((statement) => classSet.has(statement.object.value))
     .map((statement) => statement.subject);
@@ -487,7 +480,7 @@ function getInstanceNodes(store: Store): NamedNode[] {
 }
 
 function getObjects(store: Store, subject: NamedNode, predicate: NamedNode): RdfTerm[] {
-  return store.each(subject as never, predicate as never, undefined, undefined) as unknown as RdfTerm[];
+  return store.match(subject, predicate, null, null).map((quad) => quad.object);
 }
 
 function countAnnotationValues(
@@ -496,17 +489,21 @@ function countAnnotationValues(
   predicateIri: string,
   requiredLang?: string,
 ): number {
-  const predicate = $rdf.sym(predicateIri);
+  const predicate = oxigraph.namedNode(predicateIri);
   const values = getObjects(store, subject, predicate);
   if (!requiredLang) {
     return values.length;
   }
-  return values.filter((value) => (ensureLiteral(value)?.lang ?? "").toLowerCase() === requiredLang.toLowerCase()).length;
+  return values.filter((value) => ensureLiteral(value)?.language.toLowerCase() === requiredLang.toLowerCase()).length;
 }
 
 function getAnnotationSubjects(store: Store, predicateIri: string): Statement[] {
-  return store.statementsMatching(undefined, $rdf.sym(predicateIri), undefined, undefined)
+  return store.match(null, oxigraph.namedNode(predicateIri), null, null)
     .filter((statement) => ensureNamedNode(statement.subject) !== null);
+}
+
+function getFirstObject(store: Store, subject: NamedNode, predicate: NamedNode): RdfTerm | null {
+  return getObjects(store, subject, predicate)[0] ?? null;
 }
 
 async function runSelectRemote(
@@ -527,15 +524,15 @@ async function runSelectRemote(
         continue;
       }
       if (value.type === "uri") {
-        row[variable] = $rdf.sym(value.value);
+        row[variable] = oxigraph.namedNode(value.value);
       } else if (value.type === "bnode") {
-        row[variable] = $rdf.blankNode(value.value);
+        row[variable] = oxigraph.blankNode(value.value);
       } else {
         row[variable] = value["xml:lang"]
-          ? ($rdf.literal(value.value, value["xml:lang"]) as unknown as RdfTerm)
+          ? (oxigraph.literal(value.value, value["xml:lang"]) as unknown as RdfTerm)
           : value.datatype
-            ? ($rdf.literal(value.value, $rdf.sym(value.datatype)) as unknown as RdfTerm)
-            : ($rdf.literal(value.value) as unknown as RdfTerm);
+            ? (oxigraph.literal(value.value, oxigraph.namedNode(value.datatype)) as unknown as RdfTerm)
+            : (oxigraph.literal(value.value) as unknown as RdfTerm);
       }
     }
     return row;
@@ -549,27 +546,37 @@ async function executeRemoteQuery(
   format: string,
 ): Promise<{ body: string; contentType: string }> {
   const authHeader = await resolveRemoteAuthHeader(source, false);
-  const response = await fetch(source.config.endpoint, {
-    method: "POST",
-    headers: {
-      Accept: accept,
-      "Content-Type": "application/x-www-form-urlencoded; charset=utf-8",
-      ...(authHeader ? { Authorization: authHeader } : {}),
-    },
-    body: new URLSearchParams({ query, format }).toString(),
-  });
-
-  if (response.status === 401 && source.config.jwtAuthEnabled) {
-    const retryAuth = await resolveRemoteAuthHeader(source, true);
-    const retry = await fetch(source.config.endpoint, {
+  let response: Response;
+  try {
+    response = await fetch(source.config.endpoint, {
       method: "POST",
       headers: {
         Accept: accept,
         "Content-Type": "application/x-www-form-urlencoded; charset=utf-8",
-        ...(retryAuth ? { Authorization: retryAuth } : {}),
+        ...(authHeader ? { Authorization: authHeader } : {}),
       },
       body: new URLSearchParams({ query, format }).toString(),
     });
+  } catch (error) {
+    throw new Error(buildNetworkErrorMessage("SPARQL endpoint", source.config.endpoint, error));
+  }
+
+  if (response.status === 401 && source.config.jwtAuthEnabled) {
+    const retryAuth = await resolveRemoteAuthHeader(source, true);
+    let retry: Response;
+    try {
+      retry = await fetch(source.config.endpoint, {
+        method: "POST",
+        headers: {
+          Accept: accept,
+          "Content-Type": "application/x-www-form-urlencoded; charset=utf-8",
+          ...(retryAuth ? { Authorization: retryAuth } : {}),
+        },
+        body: new URLSearchParams({ query, format }).toString(),
+      });
+    } catch (error) {
+      throw new Error(buildNetworkErrorMessage("SPARQL endpoint", source.config.endpoint, error));
+    }
     if (!retry.ok) {
       throw new Error(await formatRemoteError(retry));
     }
@@ -598,6 +605,7 @@ async function resolveRemoteAuthHeader(source: RemoteRuntimeSource, forceRefresh
   if (!source.config.jwtAuthEnabled) {
     return undefined;
   }
+  const clientId = source.config.clientId?.trim() || KEYCLOAK_CLIENT_ID;
 
   if (source.authHeader && !forceRefresh && !tokenIsExpiring(source.tokenExpiresAt)) {
     return source.authHeader;
@@ -611,7 +619,7 @@ async function resolveRemoteAuthHeader(source: RemoteRuntimeSource, forceRefresh
   if (source.refreshToken && source.config.authServerUrl) {
     const payload = await requestKeycloakToken(source.config.authServerUrl, {
       grant_type: "refresh_token",
-      client_id: KEYCLOAK_CLIENT_ID,
+      client_id: clientId,
       refresh_token: source.refreshToken,
       ...(KEYCLOAK_SCOPE ? { scope: KEYCLOAK_SCOPE } : {}),
     });
@@ -622,7 +630,7 @@ async function resolveRemoteAuthHeader(source: RemoteRuntimeSource, forceRefresh
   if (source.config.authServerUrl && source.config.username && source.config.password) {
     const payload = await requestKeycloakToken(source.config.authServerUrl, {
       grant_type: "password",
-      client_id: KEYCLOAK_CLIENT_ID,
+      client_id: clientId,
       username: source.config.username,
       password: source.config.password,
       ...(KEYCLOAK_SCOPE ? { scope: KEYCLOAK_SCOPE } : {}),
@@ -642,18 +650,29 @@ async function resolveRemoteAuthHeader(source: RemoteRuntimeSource, forceRefresh
 }
 
 async function requestKeycloakToken(url: string, body: Record<string, string>): Promise<Record<string, unknown>> {
-  const response = await fetch(url, {
-    method: "POST",
-    headers: {
-      Accept: "application/json",
-      "Content-Type": "application/x-www-form-urlencoded; charset=utf-8",
-    },
-    body: new URLSearchParams(body).toString(),
-  });
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/x-www-form-urlencoded; charset=utf-8",
+      },
+      body: new URLSearchParams(body).toString(),
+    });
+  } catch (error) {
+    throw new Error(buildNetworkErrorMessage("Keycloak token endpoint", url, error));
+  }
   if (!response.ok) {
     throw new Error(`Could not retrieve a JWT token: HTTP ${response.status}: ${await response.text()}`);
   }
   return await response.json() as Record<string, unknown>;
+}
+
+function buildNetworkErrorMessage(targetLabel: string, url: string, error: unknown): string {
+  const detail = error instanceof Error ? error.message : String(error);
+  const origin = typeof globalThis.location?.origin === "string" ? globalThis.location.origin : "this app origin";
+  return `Could not reach the ${targetLabel} at ${url} from ${origin}. For remote authenticated SPARQL access, this usually means the server or gateway is rejecting browser CORS/preflight requests for this origin or the Authorization header. It can also be a network, TLS/certificate, or mixed-content issue. Browser error: ${detail}`;
 }
 
 function applyTokenPayload(source: RemoteRuntimeSource, payload: Record<string, unknown>): void {
@@ -718,57 +737,35 @@ async function runRemoteQuery(source: RemoteRuntimeSource, query: string): Promi
 
 async function runLocalQuery(source: LocalRuntimeSource, query: string): Promise<QueryResult> {
   const queryType = detectQueryType(query);
-  if (queryType === "construct" || queryType === "describe") {
-    throw new Error("Local CONSTRUCT and DESCRIBE queries are not supported in the browser workbench yet.");
-  }
-
-  const compiledQuery = $rdf.SPARQLToQuery(query, false, source.store);
-  if (!compiledQuery) {
-    throw new Error("The local SPARQL query could not be compiled by rdflib.js.");
-  }
-
-  const bindings = await new Promise<Array<Record<string, RdfTerm>>>((resolve, reject) => {
-    const rows: Array<Record<string, RdfTerm>> = [];
-    let settled = false;
-    try {
-      source.store.query(
-        compiledQuery,
-        (binding) => {
-          const row: Record<string, RdfTerm> = {};
-          for (const [key, value] of Object.entries(binding as Record<string, RdfTerm>)) {
-            row[key.startsWith("?") ? key.slice(1) : key] = value;
-          }
-          rows.push(row);
-        },
-        undefined,
-        () => {
-          settled = true;
-          resolve(rows);
-        },
-      );
-      globalThis.setTimeout(() => {
-        if (!settled) {
-          reject(new Error("The local SPARQL query did not finish."));
-        }
-      }, 5_000);
-    } catch (error) {
-      reject(error);
-    }
-  });
-
   if (queryType === "ask") {
+    const result = source.store.query(query);
+    if (typeof result !== "boolean") {
+      throw new Error("The local SPARQL ASK query did not return a boolean result.");
+    }
     return {
       queryType: "ask",
-      booleanResult: bindings.length > 0,
+      booleanResult: result,
     };
   }
 
-  const columns = [...new Set(bindings.flatMap((row) => Object.keys(row)))];
-  const limitMatch = query.match(/\bLIMIT\s+(\d+)\b/i);
-  const limit = limitMatch ? Number(limitMatch[1]) : undefined;
-  const rows = bindings
-    .slice(0, limit && Number.isFinite(limit) ? limit : bindings.length)
-    .map((row) => columns.map((column) => row[column]?.value ?? ""));
+  if (queryType === "construct" || queryType === "describe") {
+    const result = source.store.query(query);
+    if (!Array.isArray(result) || (result.length > 0 && !("subject" in result[0]))) {
+      throw new Error("The local SPARQL graph query did not return quads.");
+    }
+    return {
+      queryType,
+      graphText: result.map((quad) => quad.toString()).join("\n"),
+    };
+  }
+
+  const result = source.store.query(query);
+  if (!Array.isArray(result) || (result.length > 0 && !(result[0] instanceof Map))) {
+    throw new Error("The local SPARQL SELECT query did not return bindings.");
+  }
+  const bindings = result as Map<string, RdfTerm>[];
+  const columns = [...new Set(bindings.flatMap((row) => [...row.keys()]))];
+  const rows = bindings.map((row) => columns.map((column) => row.get(column)?.value ?? ""));
 
   return {
     queryType: "select",
@@ -779,7 +776,11 @@ async function runLocalQuery(source: LocalRuntimeSource, query: string): Promise
 
 async function querySingleValue(source: RuntimeSource, query: string, variable: string): Promise<string | null> {
   if (source.mode === "local") {
-    throw new Error("Local SPARQL helpers are not used for single-value queries.");
+    const result = source.store.query(query);
+    if (!Array.isArray(result) || (result.length > 0 && !(result[0] instanceof Map))) {
+      throw new Error("The local SPARQL query did not return bindings.");
+    }
+    return (result[0] as Map<string, RdfTerm> | undefined)?.get(variable)?.value?.trim() ?? null;
   }
   const rows = await runSelectRemote(source, query);
   const value = rows[0]?.[variable];
@@ -788,7 +789,13 @@ async function querySingleValue(source: RuntimeSource, query: string, variable: 
 
 async function queryRows(source: RuntimeSource, query: string): Promise<Array<Record<string, RdfTerm>>> {
   if (source.mode === "local") {
-    throw new Error("Local SPARQL helpers are not used for row queries.");
+    const result = source.store.query(query);
+    if (!Array.isArray(result) || (result.length > 0 && !(result[0] instanceof Map))) {
+      throw new Error("The local SPARQL query did not return bindings.");
+    }
+    return (result as Map<string, RdfTerm>[]).map((binding) =>
+      Object.fromEntries(binding.entries()) as Record<string, RdfTerm>
+    );
   }
   return runSelectRemote(source, query);
 }
@@ -799,7 +806,7 @@ async function retrieveLanguageTags(source: RuntimeSource): Promise<string[]> {
     if (!ontology) {
       return [];
     }
-    const raw = ensureLiteral(source.store.any(ontology as never, APV("GlobalMinLanguageCoverage"), undefined, undefined) as unknown as RdfTerm)?.value.trim() ?? "";
+    const raw = ensureLiteral(getFirstObject(source.store, ontology, apv("GlobalMinLanguageCoverage")))?.value.trim() ?? "";
     return validateLanguageTags(raw ? raw.split(/\s+/) : []);
   }
   const raw = await querySingleValue(source, `
@@ -828,7 +835,7 @@ async function retrieveRegexConstraint(source: RuntimeSource, predicate: NamedNo
     if (!ontology) {
       return null;
     }
-    const value = ensureLiteral(source.store.any(ontology as never, predicate as never, undefined, undefined) as unknown as RdfTerm)?.value.trim() ?? "";
+    const value = ensureLiteral(getFirstObject(source.store, ontology, predicate))?.value.trim() ?? "";
     if (!value) {
       return null;
     }
@@ -852,15 +859,15 @@ async function retrieveRegexConstraint(source: RuntimeSource, predicate: NamedNo
 }
 
 async function retrieveClassUriFormationRule(source: RuntimeSource): Promise<string | null> {
-  return retrieveRegexConstraint(source, APV("ClassURIFormationRule"), "ClassURIFormationRule");
+  return retrieveRegexConstraint(source, apv("ClassURIFormationRule"), "ClassURIFormationRule");
 }
 
 async function retrieveRelationUriFormationRule(source: RuntimeSource): Promise<string | null> {
-  return retrieveRegexConstraint(source, APV("RelationURIFormationRule"), "RelationURIFormationRule");
+  return retrieveRegexConstraint(source, apv("RelationURIFormationRule"), "RelationURIFormationRule");
 }
 
 async function retrieveInstanceUriFormationRule(source: RuntimeSource): Promise<string | null> {
-  return retrieveRegexConstraint(source, APV("InstanceURIFormationRule"), "InstanceURIFormationRule");
+  return retrieveRegexConstraint(source, apv("InstanceURIFormationRule"), "InstanceURIFormationRule");
 }
 
 function parseCoverageTokens(raw: string, label: string): Array<[string, number]> {
@@ -885,7 +892,7 @@ async function retrieveCoverageSetting(source: RuntimeSource, predicateLabel: st
     if (!ontology) {
       return [];
     }
-    const raw = ensureLiteral(source.store.any(ontology as never, APV(predicateLabel), undefined, undefined) as unknown as RdfTerm)?.value ?? "";
+    const raw = ensureLiteral(getFirstObject(source.store, ontology, apv(predicateLabel)))?.value ?? "";
     return parseCoverageTokens(raw, predicateLabel);
   }
   const raw = await querySingleValue(source, `
@@ -914,7 +921,7 @@ async function retrieveInstanceAnnotationCoverage(source: RuntimeSource): Promis
 async function retrieveMinAnnotationLength(source: RuntimeSource): Promise<Array<[string, number]>> {
   if (source.mode === "local") {
     return getAnnotationPropertyNodes(source.store).flatMap((property) =>
-      getObjects(source.store, property, APV("MinAnnotationLength"))
+      getObjects(source.store, property, apv("MinAnnotationLength"))
         .map((term) => ensureLiteral(term)?.value)
         .filter((value): value is string => Boolean(value))
         .map((value) => [property.value, Number(value)] as [string, number]),
@@ -934,7 +941,7 @@ async function retrieveMinAnnotationLength(source: RuntimeSource): Promise<Array
 async function retrieveMaxAnnotationLength(source: RuntimeSource): Promise<Array<[string, number]>> {
   if (source.mode === "local") {
     return getAnnotationPropertyNodes(source.store).flatMap((property) =>
-      getObjects(source.store, property, APV("MaxAnnotationLength"))
+      getObjects(source.store, property, apv("MaxAnnotationLength"))
         .map((term) => ensureLiteral(term)?.value)
         .filter((value): value is string => Boolean(value))
         .map((value) => [property.value, Number(value)] as [string, number]),
@@ -954,7 +961,7 @@ async function retrieveMaxAnnotationLength(source: RuntimeSource): Promise<Array
 async function retrieveAnnotationRegularExpression(source: RuntimeSource): Promise<Array<[string, string]>> {
   if (source.mode === "local") {
     return getAnnotationPropertyNodes(source.store).flatMap((property) =>
-      getObjects(source.store, property, APV("AnnotationRegularExpression"))
+      getObjects(source.store, property, apv("AnnotationRegularExpression"))
         .map((term) => ensureLiteral(term)?.value.trim())
         .filter((value): value is string => Boolean(value))
         .map((pattern) => {
@@ -980,7 +987,7 @@ async function retrieveAnnotationRegularExpression(source: RuntimeSource): Promi
 async function retrieveInstanceOfAnnotationCoverage(source: RuntimeSource): Promise<Array<[string, Array<[string, number]>]>> {
   if (source.mode === "local") {
     return getClassNodes(source.store).flatMap((classNode) =>
-      getObjects(source.store, classNode, APV("InstanceOfMinAnnotationCoverage"))
+      getObjects(source.store, classNode, apv("InstanceOfMinAnnotationCoverage"))
         .map((term) => ensureLiteral(term)?.value)
         .filter((value): value is string => Boolean(value))
         .map((raw) => [classNode.value, parseCoverageTokens(raw, `InstanceOfMinAnnotationCoverage on ${classNode.value}`)] as [string, Array<[string, number]>]),
@@ -1057,7 +1064,7 @@ async function checkClassUriFormationRule(
     ? getClassNodes(source.store).map((term) => term.value)
     : (await queryRows(source, `
       PREFIX owl: <${PREFIX_MAP.owl}>
-      SELECT ?class WHERE {
+      SELECT DISTINCT ?class WHERE {
         ?class a owl:Class .
         FILTER(!isBlank(?class))
       }
@@ -1086,7 +1093,7 @@ async function checkRelationUriFormationRule(
     ? getRelationNodes(source.store).map((term) => term.value)
     : (await queryRows(source, `
       PREFIX owl: <${PREFIX_MAP.owl}>
-      SELECT ?relation WHERE {
+      SELECT DISTINCT ?relation WHERE {
         VALUES ?type { owl:ObjectProperty owl:DatatypeProperty owl:AnnotationProperty }
         ?relation a ?type .
         FILTER(!isBlank(?relation))
@@ -1117,7 +1124,7 @@ async function checkInstanceUriFormationRule(
     : (await queryRows(source, `
       PREFIX owl: <${PREFIX_MAP.owl}>
       PREFIX rdf: <${PREFIX_MAP.rdf}>
-      SELECT ?instance WHERE {
+      SELECT DISTINCT ?instance WHERE {
         ?class rdf:type owl:Class .
         ?instance rdf:type ?class .
         FILTER(!isBlank(?instance))
@@ -1156,7 +1163,7 @@ async function checkCoverageAgainstSubjects(
 
   const checkOne = async (subjectUri: string, annotationIri: string, requiredCardinality: number, requiredLang: string | null) => {
     const count = source.mode === "local"
-      ? countAnnotationValues(source.store, $rdf.sym(subjectUri), annotationIri, requiredLang ?? undefined)
+      ? countAnnotationValues(source.store, oxigraph.namedNode(subjectUri), annotationIri, requiredLang ?? undefined)
       : await countRemoteAnnotationValues(source, subjectUri, annotationIri, requiredLang);
     if (count !== requiredCardinality) {
       violations.push([subjectUri, buildCoverageViolationMessage(annotationIri, requiredLang, count, requiredCardinality)]);
@@ -1206,7 +1213,7 @@ async function checkClassMinAnnotationCoverage(
     ? getClassNodes(source.store).map((term) => term.value)
     : (await queryRows(source, `
       PREFIX owl: <${PREFIX_MAP.owl}>
-      SELECT ?class WHERE {
+      SELECT DISTINCT ?class WHERE {
         ?class a owl:Class .
         FILTER(!isBlank(?class))
       }
@@ -1229,7 +1236,7 @@ async function checkRelationMinAnnotationCoverage(
     ? getRelationNodes(source.store).map((term) => term.value)
     : (await queryRows(source, `
       PREFIX owl: <${PREFIX_MAP.owl}>
-      SELECT ?relation WHERE {
+      SELECT DISTINCT ?relation WHERE {
         VALUES ?type { owl:ObjectProperty owl:DatatypeProperty owl:AnnotationProperty }
         ?relation a ?type .
         FILTER(!isBlank(?relation))
@@ -1254,7 +1261,7 @@ async function checkInstanceMinAnnotationCoverage(
     : (await queryRows(source, `
       PREFIX rdf: <${PREFIX_MAP.rdf}>
       PREFIX owl: <${PREFIX_MAP.owl}>
-      SELECT ?instance WHERE {
+      SELECT DISTINCT ?instance WHERE {
         ?instance rdf:type ?class .
         ?class a owl:Class .
         FILTER(!isBlank(?instance))
@@ -1299,7 +1306,7 @@ async function checkAnnotationLengths(
     const rows = source.mode === "local"
       ? getAnnotationSubjects(source.store, propertyIri).map((statement) => [statement.subject.value, normalizeAnnotationLiteral(statement.object)] as [string, string])
       : (await queryRows(source, `
-        SELECT ?subject ?value WHERE {
+        SELECT DISTINCT ?subject ?value WHERE {
           ?subject <${propertyIri}> ?value .
         }
       `)).map((row) => [row.subject.value, row.value.value] as [string, string]);
@@ -1344,7 +1351,7 @@ async function checkAnnotationRegularExpression(
     const rows = source.mode === "local"
       ? getAnnotationSubjects(source.store, propertyIri).map((statement) => [statement.subject.value, normalizeAnnotationLiteral(statement.object)] as [string, string])
       : (await queryRows(source, `
-        SELECT ?subject ?value WHERE {
+        SELECT DISTINCT ?subject ?value WHERE {
           ?subject <${propertyIri}> ?value .
         }
       `)).map((row) => [row.subject.value, row.value.value] as [string, string]);
@@ -1382,13 +1389,13 @@ async function checkInstanceOfMinAnnotationCoverage(
 
   for (const [classUri, requiredAnnotations] of context.instanceCoverageRequirements) {
     const instanceUris = source.mode === "local"
-      ? source.store.each(undefined, RDF("type"), $rdf.sym(classUri), undefined)
-          .map((term) => ensureNamedNode(term))
+      ? source.store.match(null, rdf("type"), oxigraph.namedNode(classUri), null)
+          .map((quad) => ensureNamedNode(quad.subject))
           .filter((term): term is NamedNode => Boolean(term))
           .map((term) => term.value)
       : (await queryRows(source, `
         PREFIX rdf: <${PREFIX_MAP.rdf}>
-        SELECT ?instance WHERE {
+        SELECT DISTINCT ?instance WHERE {
           ?instance rdf:type <${classUri}> .
           FILTER(!isBlank(?instance))
         }
@@ -1407,7 +1414,7 @@ async function checkInstanceOfMinAnnotationCoverage(
         if (context.languageTags.length > 0) {
           for (const languageTag of context.languageTags) {
             const count = source.mode === "local"
-              ? countAnnotationValues(source.store, $rdf.sym(instanceUri), annotationIri, languageTag)
+              ? countAnnotationValues(source.store, oxigraph.namedNode(instanceUri), annotationIri, languageTag)
               : await countRemoteAnnotationValues(source, instanceUri, annotationIri, languageTag);
             if (count !== requiredCardinality) {
               violations.push([
@@ -1420,7 +1427,7 @@ async function checkInstanceOfMinAnnotationCoverage(
           }
         } else {
           const count = source.mode === "local"
-            ? countAnnotationValues(source.store, $rdf.sym(instanceUri), annotationIri)
+            ? countAnnotationValues(source.store, oxigraph.namedNode(instanceUri), annotationIri)
             : await countRemoteAnnotationValues(source, instanceUri, annotationIri, null);
           if (count !== requiredCardinality) {
             violations.push([

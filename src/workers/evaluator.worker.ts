@@ -106,6 +106,7 @@ async function handleStartValidations(request?: Extract<WorkerRequest, { type: "
   if (!source) {
     throw new Error("Load a source before starting APV evaluations.");
   }
+  const runtimeSource = source;
   if (!cachedConstraintContext || snapshot.evaluations.constraints.status !== "completed") {
     throw new Error("Discover constraints before starting APV evaluations.");
   }
@@ -115,11 +116,12 @@ async function handleStartValidations(request?: Extract<WorkerRequest, { type: "
     request?.payload?.constraintOverrides,
   );
 
-  for (const key of EVALUATION_KEYS.filter((item) => item !== "constraints")) {
+  const validationKeys = EVALUATION_KEYS.filter((item) => item !== "constraints");
+  await Promise.all(validationKeys.map(async (key) => {
     let evaluationState = beginEvaluation(snapshot.evaluations[key]);
     updateState(key, evaluationState);
     try {
-      const result = await runValidationCheck(source, key, context, (completed, total) => {
+      const result = await runValidationCheck(runtimeSource, key, context, (completed, total) => {
         if (runId !== activeRunId) {
           return;
         }
@@ -135,7 +137,7 @@ async function handleStartValidations(request?: Extract<WorkerRequest, { type: "
       evaluationState = failEvaluation(evaluationState, error);
       updateState(key, evaluationState);
     }
-  }
+  }));
 }
 
 scope.addEventListener("message", async (event: MessageEvent<WorkerRequest>) => {

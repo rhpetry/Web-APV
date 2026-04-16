@@ -8,6 +8,7 @@ import type {
   EvaluationState,
   QueryResult,
   RemoteSourceInput,
+  SourceInput,
 } from "./types";
 import { createEmptySnapshot } from "./lib/apv";
 
@@ -342,6 +343,10 @@ function isPairList(value: unknown): value is Array<[unknown, unknown]> {
   return Array.isArray(value) && value.every((item) => Array.isArray(item) && item.length === 2);
 }
 
+function valuesEqual(left: unknown, right: unknown): boolean {
+  return JSON.stringify(left) === JSON.stringify(right);
+}
+
 function ConstraintValue({ value }: { value: unknown }) {
   if (value == null || value === "" || (Array.isArray(value) && value.length === 0)) {
     return <span className="constraint-empty">None</span>;
@@ -433,6 +438,25 @@ function ConstraintEditButton({
   );
 }
 
+function ConstraintDiscardButton({
+  label,
+  onDiscard,
+}: {
+  label: string;
+  onDiscard: () => void;
+}) {
+  return (
+    <button
+      className="constraint-discard-trigger"
+      type="button"
+      aria-label={`Discard session override for ${label}`}
+      onClick={onDiscard}
+    >
+      Discard
+    </button>
+  );
+}
+
 function ConstraintRow({ criterionKey, value }: { criterionKey: string; value: unknown }) {
   const [open, setOpen] = useState(false);
   const info = APV_CONSTRAINT_INFO[criterionKey];
@@ -468,11 +492,15 @@ function ConstraintRow({ criterionKey, value }: { criterionKey: string; value: u
 function EditableConstraintRow({
   criterionKey,
   value,
+  hasSessionOverride,
   onChange,
+  onDiscard,
 }: {
   criterionKey: string;
   value: unknown;
+  hasSessionOverride: boolean;
   onChange: (nextValue: unknown) => void;
+  onDiscard: () => void;
 }) {
   const [openInfo, setOpenInfo] = useState(false);
   const [openEditor, setOpenEditor] = useState(false);
@@ -499,6 +527,15 @@ function EditableConstraintRow({
           open={openEditor}
           onToggle={() => setOpenEditor((current) => !current)}
         />
+        {hasSessionOverride ? (
+          <>
+            <span className="constraint-override-pill">Session Override</span>
+            <ConstraintDiscardButton
+              label={info?.label ?? criterionKey}
+              onDiscard={onDiscard}
+            />
+          </>
+        ) : null}
       </div>
       <div className="constraint-content">
         <ConstraintValue value={value} />
@@ -539,6 +576,10 @@ function useWorkerBridge() {
   const [queryError, setQueryError] = useState<string | null>(null);
   const [queryResult, setQueryResult] = useState<QueryResult | null>(null);
   const pendingRequests = useRef(new Map<string, (event: WorkerEvent) => void>());
+  const pendingSourceLoad = useRef<{
+    resolve: () => void;
+    reject: (error: Error) => void;
+  } | null>(null);
 
   useEffect(() => {
     const onMessage = (event: MessageEvent<WorkerEvent>) => {
@@ -549,10 +590,14 @@ function useWorkerBridge() {
           ...current,
           source: payload.payload,
         }));
+        pendingSourceLoad.current?.resolve();
+        pendingSourceLoad.current = null;
         return;
       }
       if (payload.type === "source-error") {
         setSourceError(payload.payload.message);
+        pendingSourceLoad.current?.reject(new Error(payload.payload.message));
+        pendingSourceLoad.current = null;
         return;
       }
       if (payload.type === "evaluation-update") {
@@ -600,6 +645,20 @@ function useWorkerBridge() {
     worker.postMessage(message);
   }
 
+  function setSource(payload: SourceInput): Promise<void> {
+    if (pendingSourceLoad.current) {
+      pendingSourceLoad.current.reject(new Error("A source is already being loaded."));
+      pendingSourceLoad.current = null;
+    }
+    return new Promise((resolve, reject) => {
+      pendingSourceLoad.current = { resolve, reject };
+      post({
+        type: "set-source",
+        payload,
+      });
+    });
+  }
+
   function requestSnapshot(): Promise<EvaluationSnapshot> {
     const requestId = crypto.randomUUID();
     return new Promise((resolve) => {
@@ -642,6 +701,7 @@ function useWorkerBridge() {
     queryResult,
     setQueryResult,
     post,
+    setSource,
     requestSnapshot,
     runQuery,
   };
@@ -655,6 +715,7 @@ export default function App() {
     queryResult,
     setQueryResult,
     post,
+    setSource,
     requestSnapshot,
     runQuery,
   } = useWorkerBridge();
@@ -662,6 +723,7 @@ export default function App() {
   const [mode, setMode] = useState<"local" | "remote">("local");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [graphLoading, setGraphLoading] = useState(false);
   const [validating, setValidating] = useState(false);
   const [resolvePrefixes, setResolvePrefixes] = useState(true);
   const [editableConstraints, setEditableConstraints] = useState<Record<string, unknown>>({});
@@ -672,6 +734,7 @@ export default function App() {
     mode: "remote",
     endpoint: "",
     jwtAuthEnabled: false,
+    clientId: "anzograph",
     authServerUrl: "",
     username: "",
     password: "",
@@ -716,6 +779,14 @@ export default function App() {
         ]),
       )
     : constraintsState.constraints;
+  const displayedEditableConstraints = hasOntologyPrefixes && resolvePrefixes
+    ? Object.fromEntries(
+        Object.entries(editableConstraints).map(([key, value]) => [
+          key,
+          resolvePrefixesInValue(value, ontologyPrefixes, key),
+        ]),
+      )
+    : editableConstraints;
 
   useEffect(() => {
     if (constraintsState.status === "completed") {
@@ -726,6 +797,7 @@ export default function App() {
   async function handleDiscoverConstraints(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setSubmitting(true);
+    setGraphLoading(true);
     setValidating(false);
     setQueryResult(null);
     try {
@@ -734,32 +806,28 @@ export default function App() {
           throw new Error("Choose an ontology file before starting the browser evaluation.");
         }
         const content = await selectedFile.text();
-        post({
-          type: "set-source",
-          payload: {
-            mode: "local",
-            filename: selectedFile.name,
-            content,
-            contentType: selectedFile.type,
-          },
+        await setSource({
+          mode: "local",
+          filename: selectedFile.name,
+          content,
+          contentType: selectedFile.type,
         });
       } else {
         if (!remoteConfig.endpoint.trim()) {
           throw new Error("Provide a SPARQL endpoint URL before starting the browser evaluation.");
         }
-        post({
-          type: "set-source",
-          payload: {
-            ...remoteConfig,
-            endpoint: remoteConfig.endpoint.trim(),
-          },
+        await setSource({
+          ...remoteConfig,
+          endpoint: remoteConfig.endpoint.trim(),
         });
       }
+      setGraphLoading(false);
       post({ type: "start-constraints" });
       setFormError(null);
     } catch (error) {
       setFormError(error instanceof Error ? error.message : String(error));
     } finally {
+      setGraphLoading(false);
       setSubmitting(false);
     }
   }
@@ -817,12 +885,21 @@ export default function App() {
         </div>
         <div className="hero-panel">
           <div className="metric">
-            <span className="metric-label">Runtime</span>
-            <strong>Worker + rdflib.js</strong>
+            <span className="metric-label">Project</span>
+            <strong>
+              Developed as part of a masters thesis @{" "}
+              <a href="https://www.inf.ufrgs.br/" target="_blank" rel="noreferrer">
+                INF-UFRGS
+              </a>
+            </strong>
           </div>
           <div className="metric">
-            <span className="metric-label">Source</span>
-            <strong>{snapshot.source?.title ?? "No source loaded"}</strong>
+            <span className="metric-label">Author</span>
+            <strong>Rafael Humann Petry</strong>
+          </div>
+          <div className="metric">
+            <span className="metric-label">Contributors</span>
+            <strong>Nicolau O. Santos, Haroldo R.S. Silva, Mara Abel</strong>
           </div>
           <button className="ghost-button" type="button" onClick={() => void requestSnapshot()}>
             Refresh Worker Snapshot
@@ -903,6 +980,17 @@ export default function App() {
                     </label>
                     <div className="field-grid auth-grid">
                       <label className="field">
+                        Keycloak client ID
+                        <input
+                          type="text"
+                          value={remoteConfig.clientId ?? ""}
+                          onChange={(event) =>
+                            setRemoteConfig((current) => ({ ...current, clientId: event.target.value }))
+                          }
+                          placeholder="anzograph"
+                        />
+                      </label>
+                      <label className="field">
                         Keycloak token endpoint
                         <input
                           type="url"
@@ -943,11 +1031,25 @@ export default function App() {
               from the browser and therefore must allow CORS for direct requests.
             </div>
 
+            {graphLoading ? (
+              <div className="callout">Loading graph into the browser worker...</div>
+            ) : null}
+
             {formError ? <div className="alert error">{formError}</div> : null}
             {sourceError ? <div className="alert error">{sourceError}</div> : null}
 
-            <button className="primary-button" type="submit" disabled={submitting}>
-              {submitting ? "Preparing source..." : "Discover Constraints"}
+            <button
+              className="primary-button"
+              type="submit"
+              disabled={submitting || graphLoading || constraintsState.status === "running"}
+            >
+              {graphLoading
+                ? "Loading Graph..."
+                : constraintsState.status === "running"
+                  ? "Discovering Constraints..."
+                  : mode === "local"
+                    ? "Load Ontology and Discover Constraints"
+                    : "Discover Constraints"}
             </button>
           </form>
         </section>
@@ -972,12 +1074,19 @@ export default function App() {
           ) : null}
           <EvaluationCard
             state={constraintsState}
-            displayValue={displayedConstraints}
-            editableConstraints={editableConstraints}
+            displayValue={displayedEditableConstraints}
+            defaultDisplayValue={displayedConstraints}
+            editableConstraints={displayedEditableConstraints}
             onEditConstraint={(criterionKey, nextValue) =>
               setEditableConstraints((current) => ({
                 ...current,
                 [criterionKey]: nextValue,
+              }))
+            }
+            onResetConstraint={(criterionKey) =>
+              setEditableConstraints((current) => ({
+                ...current,
+                [criterionKey]: constraintsState.constraints[criterionKey],
               }))
             }
           />
@@ -1010,7 +1119,7 @@ export default function App() {
             <h2>SPARQL Workbench</h2>
             <p>
               Remote endpoints are queried directly from the browser, and local uploaded ontologies
-              support worker-based SELECT and ASK queries through rdflib.js.
+              run through an in-worker Oxigraph store for browser-based SPARQL execution.
             </p>
           </div>
           <div className="query-layout">
@@ -1040,12 +1149,16 @@ function EvaluationCard({
   state,
   displayValue,
   editableConstraints,
+  defaultDisplayValue,
   onEditConstraint,
+  onResetConstraint,
 }: {
   state: EvaluationState;
   displayValue?: unknown;
   editableConstraints?: Record<string, unknown>;
+  defaultDisplayValue?: Record<string, unknown>;
   onEditConstraint?: (criterionKey: string, nextValue: unknown) => void;
+  onResetConstraint?: (criterionKey: string) => void;
 }) {
   const purpose = CHECK_PURPOSES[state.key] ?? "APV evaluation";
   const isValidationCheck = state.kind === "violation";
@@ -1057,7 +1170,7 @@ function EvaluationCard({
   const showProgressRail = !isValidationCheck || state.status !== "completed";
   const violationVariant = (state.issueCount ?? 0) === 0 ? "zero" : "nonzero";
   const [detailsOpen, setDetailsOpen] = useState(false);
-  const cardInteractionProps = isValidationCheck
+  const headerInteractionProps = isValidationCheck
     ? {
         role: "button" as const,
         tabIndex: 0,
@@ -1075,9 +1188,8 @@ function EvaluationCard({
   return (
     <article
       className={`evaluation-card ${state.status} ${isValidationCheck ? "validation-check-card" : ""} ${detailsOpen ? "expanded" : ""}`}
-      {...cardInteractionProps}
     >
-      <div className="card-head">
+      <div className="card-head" {...headerInteractionProps}>
         <div>
           <span className="card-badge">{state.kind === "constraints" ? "Constraints" : "Check"}</span>
           <h3>{displayLabel}</h3>
@@ -1131,12 +1243,14 @@ function EvaluationCard({
       {state.kind === "constraints" && Object.keys(state.constraints).length > 0 ? (
         <div className="constraint-list">
           {Object.entries((displayValue as Record<string, unknown>) ?? state.constraints).map(([key, value]) => (
-            editableConstraints && onEditConstraint ? (
+            editableConstraints && onEditConstraint && onResetConstraint ? (
               <EditableConstraintRow
                 key={key}
                 criterionKey={key}
                 value={value}
+                hasSessionOverride={!valuesEqual(value, defaultDisplayValue?.[key])}
                 onChange={(nextValue) => onEditConstraint(key, nextValue)}
+                onDiscard={() => onResetConstraint(key)}
               />
             ) : (
               <ConstraintRow key={key} criterionKey={key} value={value} />

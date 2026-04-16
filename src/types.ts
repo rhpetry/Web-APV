@@ -45,6 +45,7 @@ export interface RemoteSourceInput {
   mode: "remote";
   endpoint: string;
   jwtAuthEnabled: boolean;
+  clientId?: string;
   authServerUrl?: string;
   username?: string;
   password?: string;

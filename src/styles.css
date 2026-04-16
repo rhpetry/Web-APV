@@ -500,6 +500,10 @@ button {
   gap: 16px;
 }
 
+.constraint-toggle {
+  margin-bottom: 8px;
+}
+
 .constraint-heading {
   display: flex;
   align-items: center;
@@ -536,6 +540,37 @@ button {
   border: 0;
   min-width: 30px;
   min-height: 30px;
+}
+
+.constraint-discard-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: fit-content;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(176, 54, 44, 0.1);
+  color: #8a261d;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  border: 0;
+  min-width: 30px;
+  min-height: 30px;
+}
+
+.constraint-override-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(11, 128, 144, 0.12);
+  color: #0f5c5d;
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 .constraint-info-panel {

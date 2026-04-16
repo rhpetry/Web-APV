@@ -4,7 +4,7 @@ Web APV is now a browser-only TypeScript application. It no longer depends on Fa
 
 The application uses:
 
-- `rdflib.js` to parse and inspect local RDF graphs directly in the browser
+- `oxigraph` WebAssembly bindings to parse, inspect, and query local RDF graphs directly in the browser
 - a dedicated Web Worker to run APV constraint discovery and validation without freezing the UI
 - direct browser `fetch` calls for remote SPARQL endpoints when the endpoint allows CORS
 
@@ -58,4 +58,4 @@ npm run build
 ## Current limits
 
 - The browser refactor preserves APV evaluation behavior, progress tracking, local file parsing, and direct remote SPARQL querying.
-- Local ad hoc queries currently target `SELECT` and `ASK`. `CONSTRUCT` and `DESCRIBE` are not exposed yet in the worker workbench.
+- Local graph execution now runs through an in-memory Oxigraph store inside the worker, so persistence across reloads is still not built in.
