@@ -14,13 +14,73 @@ const NS = {
   dc: "http://purl.org/dc/elements/1.1/",
 };
 
-const FILES = [
-  "data/obo/apollo_sv.owl",
-  "data/obo/disdriv.owl",
-  "data/obo/doid.owl",
-  "data/obo/maxo.owl",
-  "data/obo/mondo.owl",
+const DATA_DIRECTORY = path.resolve("scripts/data");
+
+const ONTOLOGIES = [
+  {
+    file: "apollo_sv.owl",
+    name: "Apollo-SV",
+    url: "https://raw.githubusercontent.com/ApolloDev/apollo-sv/a3f846176ab1ca29ba3e343fe769ca98f0fc94b8/apollo_sv.owl",
+  },
+  {
+    file: "disdriv.owl",
+    name: "DISDRIV",
+    url: "https://raw.githubusercontent.com/DiseaseOntology/DiseaseDriversOntology/ef481df386a727852377f575dade775e30a4b4a4/src/ontology/disdriv.owl",
+  },
+  {
+    file: "doid.owl",
+    name: "DOID",
+    url: "https://raw.githubusercontent.com/DiseaseOntology/HumanDiseaseOntology/c55d39e50fdb27ad843abccd8461c61e0a1e7f24/src/ontology/doid.owl",
+  },
+  {
+    file: "maxo.owl",
+    name: "MAxO",
+    url: "https://raw.githubusercontent.com/monarch-initiative/MAxO/1e3aa56cc6e4fb40836e57d0baccf7e3ee64e694/maxo.owl",
+  },
+  {
+    file: "mondo.owl",
+    name: "Mondo",
+    url: "https://github.com/monarch-initiative/mondo/releases/download/v2026-07-06/mondo.owl",
+  },
 ];
+
+async function downloadOntology({ file, url }) {
+  const destination = path.join(DATA_DIRECTORY, file);
+  const temporaryDestination = `${destination}.download`;
+
+  console.error(`Downloading missing ontology ${file}...`);
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`Failed to download ${file}: HTTP ${response.status} ${response.statusText}`);
+  }
+
+  try {
+    const content = Buffer.from(await response.arrayBuffer());
+    if (content.length === 0) {
+      throw new Error(`Downloaded ontology ${file} is empty`);
+    }
+    fs.writeFileSync(temporaryDestination, content);
+    fs.renameSync(temporaryDestination, destination);
+  } catch (error) {
+    fs.rmSync(temporaryDestination, { force: true });
+    throw error;
+  }
+}
+
+async function ensureOntologies() {
+  fs.mkdirSync(DATA_DIRECTORY, { recursive: true });
+
+  for (const ontology of ONTOLOGIES) {
+    const destination = path.join(DATA_DIRECTORY, ontology.file);
+    if (!fs.existsSync(destination) || fs.statSync(destination).size === 0) {
+      await downloadOntology(ontology);
+    }
+  }
+}
+
+const FILES = ONTOLOGIES.map(({ file }) => path.join(DATA_DIRECTORY, file));
+const ONTOLOGY_NAMES = new Map(ONTOLOGIES.map(({ file, name }) => [file, name]));
+const TABLES_ENABLED = process.argv.includes("--tables");
 
 const SETTINGS = {
   requiredLanguage: "en",
@@ -296,7 +356,7 @@ function evaluateFile(relativePath) {
   const evaluationMs = performance.now() - evaluationStart;
 
   return {
-    file: relativePath,
+    file: path.relative(process.cwd(), absolutePath),
     triples: countTriples(store),
     classes: classes.length,
     relations: relations.length,
@@ -342,5 +402,116 @@ function evaluateFile(relativePath) {
   };
 }
 
+function formatMarkdownTable(headers, rows) {
+  const stringRows = rows.map((row) => row.map(String));
+  const widths = headers.map((header, index) =>
+    Math.max(header.length, ...stringRows.map((row) => row[index].length)),
+  );
+  const formatRow = (row) =>
+    `| ${row.map((value, index) =>
+      index === 0 ? value.padEnd(widths[index]) : value.padStart(widths[index])
+    ).join(" | ")} |`;
+  const header = formatRow(headers);
+  const separator = `| ${widths.map((width, index) =>
+    index === 0 ? "-".repeat(width) : `${"-".repeat(Math.max(1, width - 1))}:`
+  ).join(" | ")} |`;
+  const body = stringRows.map(formatRow).join("\n");
+  return `${header}\n${separator}\n${body}`;
+}
+
+function ontologyName(result) {
+  return ONTOLOGY_NAMES.get(path.basename(result.file)) ?? path.basename(result.file, ".owl");
+}
+
+function classPercentage(value, classes) {
+  return classes === 0 ? "0.00%" : `${((value / classes) * 100).toFixed(2)}%`;
+}
+
+function buildTables(results) {
+  const annotationHeaders = [
+    "Ontology",
+    "Missing Labels",
+    "Missing @en Label",
+    "Missing Def.",
+    "Missing @en Def.",
+  ];
+
+  const absoluteAnnotations = formatMarkdownTable(
+    annotationHeaders,
+    results.map((result) => [
+      ontologyName(result),
+      result.labels.classesMissingLabel,
+      result.labels.classesMissingEnglishLabel,
+      result.definitions.classesMissingDefinition,
+      result.definitions.classesMissingEnglishDefinition,
+    ]),
+  );
+
+  const percentageAnnotations = formatMarkdownTable(
+    annotationHeaders,
+    results.map((result) => [
+      ontologyName(result),
+      classPercentage(result.labels.classesMissingLabel, result.classes),
+      classPercentage(result.labels.classesMissingEnglishLabel, result.classes),
+      classPercentage(result.definitions.classesMissingDefinition, result.classes),
+      classPercentage(result.definitions.classesMissingEnglishDefinition, result.classes),
+    ]),
+  );
+
+  const valueQuality = formatMarkdownTable(
+    [
+      "Ontology",
+      "Label Min <5",
+      "Label Max >500",
+      "Label Regex",
+      "Def. Min <5",
+      "Def. Max >500",
+      "Def. Regex",
+    ],
+    results.map((result) => [
+      ontologyName(result),
+      result.valueQuality.labelMinLengthViolations,
+      result.valueQuality.labelMaxLengthViolations,
+      result.valueQuality.labelRegexViolations,
+      result.valueQuality.definitionMinLengthViolations,
+      result.valueQuality.definitionMaxLengthViolations,
+      result.valueQuality.definitionRegexViolations,
+    ]),
+  );
+
+  const uriViolations = formatMarkdownTable(
+    ["Ontology", "Class URI Violation", "Rel. URI Violation", "Instance URI Violation"],
+    results.map((result) => [
+      ontologyName(result),
+      result.uriNamespaces.classUriViolations,
+      result.uriNamespaces.relationUriViolations,
+      result.uriNamespaces.instanceUriViolations,
+    ]),
+  );
+
+  const timings = formatMarkdownTable(
+    ["Ontology", "Parse Time (ms)", "Validation Time (ms)"],
+    results.map((result) => [ontologyName(result), result.parseMs, result.evaluationMs]),
+  );
+
+  return [
+    "## Missing annotations (absolute)",
+    absoluteAnnotations,
+    "## Missing annotations (% of classes)",
+    percentageAnnotations,
+    "## Lexical and length violations (absolute)",
+    valueQuality,
+    "## URI formation violations (absolute)",
+    "*Note: Namespace-based URI violations use namespaces that are not declared by the ontology and occur fewer than 5 times for that entity type.*",
+    uriViolations,
+    "## Timings",
+    timings,
+  ].join("\n\n");
+}
+
+await ensureOntologies();
 const results = FILES.map(evaluateFile);
 console.log(JSON.stringify(results, null, 2));
+if (TABLES_ENABLED) {
+  console.log(`\n${buildTables(results)}`);
+}

@@ -1,6 +1,7 @@
-import { FormEvent, KeyboardEvent, useEffect, useMemo, useRef, useState } from "react";
+import { FormEvent, KeyboardEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import languageTags from "language-tags";
 
-import { APV_CONSTRAINT_INFO, CHECK_PURPOSES, DEFAULT_QUERY, EVALUATION_KEYS } from "./constants";
+import { APV_CONSTRAINT_INFO, APV_RDF_URL, CHECK_PURPOSES, DEFAULT_QUERY, EVALUATION_KEYS } from "./constants";
 import type { WorkerEvent } from "./lib/workerProtocol";
 import type {
   EvaluationKey,
@@ -319,9 +320,103 @@ function parseConstraintEditorValue(criterionKey: string, rawValue: string): unk
   return trimmed;
 }
 
+type ConstraintDraftValidation = {
+  value: unknown;
+  error: string | null;
+};
+
+function validateConstraintEditorValue(criterionKey: string, rawValue: string): ConstraintDraftValidation {
+  if (!rawValue) {
+    return { value: parseConstraintEditorValue(criterionKey, rawValue), error: null };
+  }
+
+  if (criterionKey === "GlobalMinLanguageCoverage") {
+    if (/^\s|\s$/.test(rawValue)) {
+      return {
+        value: null,
+        error: "Complete the language tag after the whitespace separator.",
+      };
+    }
+    const tags = rawValue.split(/\s+/);
+    const invalidTag = tags.find((tag) => !languageTags.check(tag));
+    return invalidTag
+      ? { value: null, error: `“${invalidTag}” is not a valid IANA language tag.` }
+      : { value: tags, error: null };
+  }
+
+  const pairCriteria = new Set([
+    "ClassMinAnnotationCoverage",
+    "RelationMinAnnotationCoverage",
+    "InstanceMinAnnotationCoverage",
+    "MinAnnotationLength",
+    "MaxAnnotationLength",
+    "AnnotationRegularExpression",
+  ]);
+  if (pairCriteria.has(criterionKey)) {
+    const lines = rawValue.split("\n");
+    const incompleteLine = lines.findIndex((line) => {
+      const parts = line.split("|");
+      return parts.length !== 2 || !parts[0].trim() || !parts[1].trim();
+    });
+    if (incompleteLine >= 0) {
+      return {
+        value: null,
+        error: `Line ${incompleteLine + 1} must use the format “left | right”.`,
+      };
+    }
+
+    if (criterionKey !== "AnnotationRegularExpression") {
+      const invalidNumberLine = lines.findIndex((line) => {
+        const right = line.split("|")[1].trim();
+        return !/^\d+$/.test(right) || Number(right) < 1;
+      });
+      if (invalidNumberLine >= 0) {
+        return {
+          value: null,
+          error: `Line ${invalidNumberLine + 1} requires a positive whole number on the right.`,
+        };
+      }
+    } else {
+      const invalidRegexLine = lines.findIndex((line) => {
+        try {
+          new RegExp(line.split("|")[1].trim());
+          return false;
+        } catch {
+          return true;
+        }
+      });
+      if (invalidRegexLine >= 0) {
+        return { value: null, error: `Line ${invalidRegexLine + 1} contains an invalid regular expression.` };
+      }
+    }
+  }
+
+  if (criterionKey === "InstanceOfMinAnnotationCoverage") {
+    const lines = rawValue.split("\n");
+    const invalidLine = lines.findIndex((line) => {
+      const parts = line.split("=>");
+      if (parts.length !== 2 || !parts[0].trim() || !parts[1].trim()) {
+        return true;
+      }
+      return parts[1].split(";").some((entry) => {
+        const entryParts = entry.split("|");
+        return entryParts.length !== 2 || !entryParts[0].trim() || !/^\d+$/.test(entryParts[1].trim()) || Number(entryParts[1].trim()) < 1;
+      });
+    });
+    if (invalidLine >= 0) {
+      return {
+        value: null,
+        error: `Line ${invalidLine + 1} must use “classIRI => annotationIRI | positive cardinality”.`,
+      };
+    }
+  }
+
+  return { value: parseConstraintEditorValue(criterionKey, rawValue), error: null };
+}
+
 function constraintEditorHint(criterionKey: string): string {
   if (criterionKey === "GlobalMinLanguageCoverage") {
-    return "One language tag per line.";
+    return "Enter IANA language tags separated by whitespace (for example: en pt-BR).";
   }
   if (
     criterionKey === "ClassMinAnnotationCoverage" ||
@@ -495,21 +590,31 @@ function EditableConstraintRow({
   hasSessionOverride,
   onChange,
   onDiscard,
+  onValidityChange,
 }: {
   criterionKey: string;
   value: unknown;
   hasSessionOverride: boolean;
   onChange: (nextValue: unknown) => void;
   onDiscard: () => void;
+  onValidityChange: (error: string | null) => void;
 }) {
   const [openInfo, setOpenInfo] = useState(false);
   const [openEditor, setOpenEditor] = useState(false);
   const info = APV_CONSTRAINT_INFO[criterionKey];
   const [draft, setDraft] = useState(() => serializeConstraintEditorValue(criterionKey, value));
+  const validation = useMemo(() => validateConstraintEditorValue(criterionKey, draft), [criterionKey, draft]);
 
   useEffect(() => {
-    setDraft(serializeConstraintEditorValue(criterionKey, value));
-  }, [criterionKey, value]);
+    if (!openEditor) {
+      setDraft(serializeConstraintEditorValue(criterionKey, value));
+    }
+  }, [criterionKey, openEditor, value]);
+
+  useEffect(() => {
+    onValidityChange(openEditor ? validation.error : null);
+    return () => onValidityChange(null);
+  }, [openEditor, onValidityChange, validation.error]);
 
   return (
     <div className="constraint-row editable">
@@ -525,14 +630,23 @@ function EditableConstraintRow({
         <ConstraintEditButton
           label={info?.label ?? criterionKey}
           open={openEditor}
-          onToggle={() => setOpenEditor((current) => !current)}
+          onToggle={() => {
+            if (!openEditor) {
+              setDraft(serializeConstraintEditorValue(criterionKey, value));
+            }
+            setOpenEditor((current) => !current);
+          }}
         />
         {hasSessionOverride ? (
           <>
             <span className="constraint-override-pill">Session Override</span>
             <ConstraintDiscardButton
               label={info?.label ?? criterionKey}
-              onDiscard={onDiscard}
+              onDiscard={() => {
+                setOpenEditor(false);
+                onValidityChange(null);
+                onDiscard();
+              }}
             />
           </>
         ) : null}
@@ -548,13 +662,25 @@ function EditableConstraintRow({
           <textarea
             id={`editor-${criterionKey}`}
             value={draft}
+            aria-invalid={validation.error ? "true" : "false"}
+            aria-describedby={`editor-help-${criterionKey}`}
+            className={validation.error ? "invalid" : undefined}
             onChange={(event) => {
               const nextDraft = event.target.value;
               setDraft(nextDraft);
-              onChange(parseConstraintEditorValue(criterionKey, nextDraft));
+              const nextValidation = validateConstraintEditorValue(criterionKey, nextDraft);
+              if (!nextValidation.error) {
+                onChange(nextValidation.value);
+              }
             }}
           />
-          <div className="constraint-editor-hint">{constraintEditorHint(criterionKey)}</div>
+          <div
+            id={`editor-help-${criterionKey}`}
+            className={validation.error ? "constraint-editor-error" : "constraint-editor-hint"}
+            role={validation.error ? "alert" : undefined}
+          >
+            {validation.error ?? constraintEditorHint(criterionKey)}
+          </div>
         </div>
       ) : null}
       {info && openInfo ? (
@@ -727,6 +853,7 @@ export default function App() {
   const [validating, setValidating] = useState(false);
   const [resolvePrefixes, setResolvePrefixes] = useState(true);
   const [editableConstraints, setEditableConstraints] = useState<Record<string, unknown>>({});
+  const [constraintDraftErrors, setConstraintDraftErrors] = useState<Record<string, string>>({});
   const [query, setQuery] = useState(DEFAULT_QUERY);
   const [querying, setQuerying] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -769,6 +896,7 @@ export default function App() {
   );
   const constraintsState = snapshot.evaluations.constraints;
   const canStartValidations = snapshot.source !== null && constraintsState.status === "completed";
+  const hasInvalidConstraintDrafts = Object.keys(constraintDraftErrors).length > 0;
   const ontologyPrefixes = snapshot.source?.prefixes ?? {};
   const hasOntologyPrefixes = Object.keys(ontologyPrefixes).length > 0;
   const displayedConstraints = hasOntologyPrefixes && resolvePrefixes
@@ -823,6 +951,7 @@ export default function App() {
       }
       setGraphLoading(false);
       post({ type: "start-constraints" });
+      setConstraintDraftErrors({});
       setFormError(null);
     } catch (error) {
       setFormError(error instanceof Error ? error.message : String(error));
@@ -866,6 +995,22 @@ export default function App() {
     }
   }
 
+  const handleConstraintValidityChange = useCallback((criterionKey: string, error: string | null) => {
+    setConstraintDraftErrors((current) => {
+      if (error) {
+        return current[criterionKey] === error
+          ? current
+          : { ...current, [criterionKey]: error };
+      }
+      if (!(criterionKey in current)) {
+        return current;
+      }
+      const next = { ...current };
+      delete next[criterionKey];
+      return next;
+    });
+  }, []);
+
   return (
     <div className="app-shell">
       <header className="hero">
@@ -878,8 +1023,12 @@ export default function App() {
             The canonical APV vocabulary file is available below as a reference for the constraint definitions.
           </p>
           <div className="hero-actions">
-            <a className="ghost-button download-button" href="/references/APV.rdf" download="APV.rdf">
-              Download APV RDF
+            <a
+              className="ghost-button download-button"
+              href={APV_RDF_URL}
+              download="OWL-APV.rdf"
+            >
+              Download OWL-APV
             </a>
           </div>
         </div>
@@ -899,7 +1048,7 @@ export default function App() {
           </div>
           <div className="metric">
             <span className="metric-label">Contributors</span>
-            <strong>Nicolau O. Santos, Haroldo R.S. Silva, Mara Abel</strong>
+            <strong>Nicolau O. Santos, Haroldo R. S. Silva, Mara Abel, Joao C. Netto</strong>
           </div>
           <button className="ghost-button" type="button" onClick={() => void requestSnapshot()}>
             Refresh Worker Snapshot
@@ -1089,16 +1238,22 @@ export default function App() {
                 [criterionKey]: constraintsState.constraints[criterionKey],
               }))
             }
+            onConstraintValidityChange={handleConstraintValidityChange}
           />
           <div className="constraints-actions">
             <button
               className="primary-button"
               type="button"
-              disabled={!canStartValidations || validating}
+              disabled={!canStartValidations || validating || hasInvalidConstraintDrafts}
               onClick={() => void handleStartValidations()}
             >
               {validating ? "Starting evaluations..." : "Evaluate in Browser"}
             </button>
+            {hasInvalidConstraintDrafts ? (
+              <p className="constraint-validation-summary" role="alert">
+                Correct the highlighted constraint syntax before starting the evaluation.
+              </p>
+            ) : null}
           </div>
         </section>
 
@@ -1152,6 +1307,7 @@ function EvaluationCard({
   defaultDisplayValue,
   onEditConstraint,
   onResetConstraint,
+  onConstraintValidityChange,
 }: {
   state: EvaluationState;
   displayValue?: unknown;
@@ -1159,6 +1315,7 @@ function EvaluationCard({
   defaultDisplayValue?: Record<string, unknown>;
   onEditConstraint?: (criterionKey: string, nextValue: unknown) => void;
   onResetConstraint?: (criterionKey: string) => void;
+  onConstraintValidityChange?: (criterionKey: string, error: string | null) => void;
 }) {
   const purpose = CHECK_PURPOSES[state.key] ?? "APV evaluation";
   const isValidationCheck = state.kind === "violation";
@@ -1243,7 +1400,7 @@ function EvaluationCard({
       {state.kind === "constraints" && Object.keys(state.constraints).length > 0 ? (
         <div className="constraint-list">
           {Object.entries((displayValue as Record<string, unknown>) ?? state.constraints).map(([key, value]) => (
-            editableConstraints && onEditConstraint && onResetConstraint ? (
+            editableConstraints && onEditConstraint && onResetConstraint && onConstraintValidityChange ? (
               <EditableConstraintRow
                 key={key}
                 criterionKey={key}
@@ -1251,6 +1408,7 @@ function EvaluationCard({
                 hasSessionOverride={!valuesEqual(value, defaultDisplayValue?.[key])}
                 onChange={(nextValue) => onEditConstraint(key, nextValue)}
                 onDiscard={() => onResetConstraint(key)}
+                onValidityChange={(error) => onConstraintValidityChange(key, error)}
               />
             ) : (
               <ConstraintRow key={key} criterionKey={key} value={value} />

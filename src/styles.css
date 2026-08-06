@@ -639,9 +639,29 @@ button {
   font: inherit;
 }
 
+.constraint-editor textarea.invalid {
+  border-color: var(--error);
+  background: var(--error-bg);
+  box-shadow: 0 0 0 3px rgba(139, 36, 50, 0.1);
+}
+
+.constraint-editor textarea.invalid:focus {
+  outline-color: var(--error);
+}
+
 .constraint-editor-hint {
   color: var(--muted);
   font-size: 0.88rem;
+}
+
+.constraint-editor-error,
+.constraint-validation-summary {
+  color: var(--error);
+  font-size: 0.88rem;
+}
+
+.constraint-validation-summary {
+  margin: 0;
 }
 
 .constraint-chip-row {

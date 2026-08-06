@@ -7,7 +7,6 @@
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
-    "reproduce:eval": "node scripts/reproduce-apv-eval.mjs",
     "reproduce:obo": "node scripts/run-uniform-obo-benchmark.mjs"
   },
   "dependencies": {

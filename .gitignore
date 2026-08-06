@@ -16,3 +16,4 @@ node_modules/
 # Big ontologies
 data/ontologies/mondo-base-edited.owl
 data/obo/*
+scripts/data/

@@ -13,6 +13,9 @@ export const EVALUATION_KEYS = [
   "InstanceOfMinAnnotationCoverage",
 ] as const;
 
+export const APV_REPOSITORY_URL = "https://github.com/rhpetry/OWL-APV";
+export const APV_RDF_URL = "/OWL-APV.rdf";
+
 export const CHECK_PURPOSES: Record<string, string> = {
   constraints: "Read ontology annotations and extract the APV configuration before validation starts.",
   ClassURIFormationRule: "Check whether each class IRI follows the configured naming pattern.",
@@ -51,7 +54,7 @@ export const APV_CONSTRAINT_INFO: Record<string, { label: string; description: s
     label: "Global minimum language coverage",
     description:
       "Defines the set of language tags that annotation literals should cover across the ontology. In practice, this means APV can verify whether required translations exist for the annotation properties that are expected to be multilingual. The value is a whitespace-separated list of IANA language tags.",
-    example: 'MyOntology (owl:Ontology) --apv:GlobalMinLanguageCoverage--> "en-US es pt-BR"',
+    example: 'MyOntology (owl:Ontology) --apv:GlobalMinimumLanguageCoverage--> "en-US es pt-BR"',
   },
   ClassMinAnnotationCoverage: {
     label: "Class minimum annotation coverage",

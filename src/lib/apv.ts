@@ -89,7 +89,7 @@ const PREFIX_MAP: Record<string, string> = {
   rdfs: "http://www.w3.org/2000/01/rdf-schema#",
   owl: "http://www.w3.org/2002/07/owl#",
   skos: "http://www.w3.org/2004/02/skos/core#",
-  apv: "http://inf.ufrgs.br/ontologies/apv#",
+  apv: "http://www.inf.ufrgs.br/ontologies/APV#",
 };
 
 const OXIGRAPH_INIT = initOxigraph(oxigraphWasmUrl);
@@ -806,7 +806,7 @@ async function retrieveLanguageTags(source: RuntimeSource): Promise<string[]> {
     if (!ontology) {
       return [];
     }
-    const raw = ensureLiteral(getFirstObject(source.store, ontology, apv("GlobalMinLanguageCoverage")))?.value.trim() ?? "";
+    const raw = ensureLiteral(getFirstObject(source.store, ontology, apv("GlobalMinimumLanguageCoverage")))?.value.trim() ?? "";
     return validateLanguageTags(raw ? raw.split(/\s+/) : []);
   }
   const raw = await querySingleValue(source, `
@@ -814,7 +814,7 @@ async function retrieveLanguageTags(source: RuntimeSource): Promise<string[]> {
     PREFIX apv: <${PREFIX_MAP.apv}>
     SELECT ?gmlc WHERE {
       ?o a owl:Ontology ;
-         apv:GlobalMinLanguageCoverage ?gmlc .
+         apv:GlobalMinimumLanguageCoverage ?gmlc .
     }
   `, "gmlc");
   return validateLanguageTags(raw ? raw.split(/\s+/) : []);
@@ -823,7 +823,7 @@ async function retrieveLanguageTags(source: RuntimeSource): Promise<string[]> {
 function validateLanguageTags(tags: string[]): string[] {
   for (const tag of tags) {
     if (!languageTags.check(tag)) {
-      throw new Error(`Invalid language tag in GlobalMinLanguageCoverage: '${tag}'`);
+      throw new Error(`Invalid language tag in GlobalMinimumLanguageCoverage: '${tag}'`);
     }
   }
   return tags;
