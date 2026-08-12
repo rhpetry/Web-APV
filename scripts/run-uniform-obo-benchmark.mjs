@@ -42,6 +42,11 @@ const ONTOLOGIES = [
     name: "Mondo",
     url: "https://github.com/monarch-initiative/mondo/releases/download/v2026-07-06/mondo.owl",
   },
+  {
+    file: "omrse.owl",
+    name: "OMRSE",
+    url: "https://github.com/ufbmi/OMRSE/releases/download/v2026-07-08/omrse.owl",
+  },
 ];
 
 async function downloadOntology({ file, url }) {
